@@ -5,6 +5,7 @@ Update the thermodynamic properties for the multicomponent phase
 change model, and compute the lagrangian derivative of the density,
 which is used as a sorce term for the velocity divergence, to
 describe low Mach compressibility effects. */
+// This version will be modified to accomodate a q_source at any point, UoM [W/m2]
 
 #ifdef VARPROP
 #include "solid-thermal-conductivity.h"
@@ -14,6 +15,8 @@ extern scalar porosity;
 scalar DTDtS[], DTDtG[];
 scalar * DYDtG_G = NULL;
 scalar * DYDtG_S = NULL;
+
+scalar q_source[];
 
 trace
 void update_properties (void) {
@@ -231,11 +234,11 @@ void update_divergence (void) {
   foreach() {
     foreach_dimension()
       DTDtS[] += (lambdagradTS.x[1] - lambdagradTS.x[])/Delta;
-    DTDtS[] += sST[];
+    DTDtS[] += sST[] + q_source;
 
     foreach_dimension()
       DTDtG[] += (lambdagradTG.x[1] - lambdagradTG.x[])/Delta;
-    DTDtG[] += sGT[];
+    DTDtG[] += sGT[] + q_source;
   }
 
   // EXTERNAL GAS PHASE
