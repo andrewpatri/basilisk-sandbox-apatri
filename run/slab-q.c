@@ -22,25 +22,25 @@
 
 // include section
 
-// in 2d no axi.h since no viable axial simmetry is found and also then considering the gravity in 3d ok like in the photos of wood unburnt burnt etc
+#include "axi.h"
 #include "navier-stokes/centered-phasechange.h"
 #include "opensmoke-properties.h" // properties
 #include "two-phase.h"// for VOF and defines fraction and colors
 #include "shrinking.h" // shriniking models ATTENTION choose the good one remember to define
-#include "multicomponent-varprop.h" // for all the define for the properties
+#include "multicomponent-varprop.h" // for all the define for the properties MAYBE CHANGE TO USE MODIFIED DATA
 #include "darcy.h" // to take into account flow resistance due to porosity
 #include "view.h"
 
 // dati base
-double Uin = 0.; //no velocity in exp
+//double Uin = 0.; //no velocity in exp
 double tend = 600.; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
 
 // Boundary condition
-u.n[left]    = dirichlet (Uin);
-u.t[left]    = dirichlet (0.);
-p[left]      = neumann (0.);
-pf[left]     = neumann (0.);
-psi[left]    = dirichlet (0.);
+u.n[right]    = dirichlet (0.);
+u.t[right]    = dirichlet (0.);
+p[right]      = neumann (0.);
+pf[right]     = neumann (0.);
+psi[right]    = dirichlet (0.);
 
 u.n[top]      = dirichlet (0.);
 u.t[top]      = dirichlet (0.);
@@ -50,11 +50,11 @@ psi[top]      = dirichlet (0.);
   		
 
 
-u.n[right]    = neumann (0.);
-u.t[right]    = neumann (0.);
-p[right]      = dirichlet (0.);
-pf[right]     = dirichlet (0.);
-psi[right]    = dirichlet (0.);
+u.n[left]    = neumann (0.);
+u.t[left]    = neumann (0.);
+p[left]      = dirichlet (0.);
+pf[left]     = dirichlet (0.);
+psi[left]    = dirichlet (0.);
 
 u.n[bottom]      = neumann (0.);
 u.t[bottom]      = neumann (0.);
@@ -62,7 +62,155 @@ p[bottom]        = neumann (0.);
 pf[bottom]       = neumann (0.);
 psi[bottom]      = neumann (0.);
 
+
+
+
+#define q_time(a,b,t)(a*pow(t,b));
+// q sorg 
+double q_sorg; 
+
 int maxlevel = 7; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
 
+int main() {
+  
+  lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
+  lambdaSmodel = L_HUANG;
+  
+  rhoS = 720;  // kg/m3
+  eps0 = 0.39;
+
+  //dummy properties
+  rho1 = 1., rho2 = 1.;
+  mu1 = 1., mu2 = 1.;
+
+  zeta_policy = ZETA_CONST;
+
+/*#if TREE
+  L0 = 4e-2*3;
+#else
+  int n_proc = 3;
+  size((4e-2)*n_proc);
+  dimensions(nx=n_proc, ny=1);
+#endif */
+L0 = H0*2; // first try just the block of wood
+  
+
+origin (0, 0);
+
+  DT = 1e-1;
+
+  shift_prod = true;
+  kinfolder = "biomass/dummy-solid";
+  init_grid(1 << maxlevel);
+  run();
+}
+
+#define rectangle(x,y,H0)(fabs(x)<H0 && fabs(y)<2*H0);
+
+event init(i=0) {
+/*#if TREE
+  mask (y > 4e-2 ? top : none);
+#endif
+*/
+  fraction (f, rectangle (x, y, H0));
+
+  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1.;
+  gas_start[OpenSMOKE_IndexOfSpecies ("TAR")] = 0.;
+  gas_start[OpenSMOKE_IndexOfSpecies ("H2O")] = 0.;
+  
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
+
+  foreach()
+    porosity[] = eps0*f[];
+
+  solid_mass0 = 0.;
+  foreach (reduction(+:solid_mass0))
+    solid_mass0 += (f[]-porosity[])*rhoS*dv(); //Note: (1-e) = (1-ef)!= (1-e)f
+
+  for (int jj=0; jj<NGS; jj++) {
+    scalar YG = YGList_G[jj];
+    if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
+      YG[left] = dirichlet (1.);
+    } else {
+      YG[left] = dirichlet (0.);
+    }
+  }
+
+  foreach()
+    u.x[] = f[] > F_ERR ? 0. : Uin;
+
+  // foreach()
+    //T[] = f[] > F_ERR ? TS0 : TG0; // then set to TS0 o TG0 a 300k
+  // Temperature 
+    TS0 = 300.; TG0 = T_ENV; // the change this to 300 K
+    TG[right] = dirichlet (TG0); // neumann(0.); to use when then setting T0 in gas phase
+    TG[left] = neumann (0);
+    TG[top] = dirichlet (TG0); // neumann(0.);
+    TG[bottom] = neumann(0.);
+  /*//vertical shrinking no need for data but nice to see
+  r0 = 0.;
+  coord p;
+  coord regionvert[2] = {{0, 0}, {0, L0}};
+  coord samplingvert = {1, (1<<maxlevel)/2  };
+  foreach_region (p, regionvert, samplingvert, reduction(+:r0))
+    r0 += f[];*/
+
+    q_sorg = q_time(a_q,b_q,t);
+}
+
+event output (t += 1) {
+  //fprintf (stderr, "%g\n", t);
+
+  char name[80];
+  sprintf(name, "OutputData_T1-%d", maxlevel);
+  static FILE * fp = fopen (name, "w");
+
+  //log mass profile
+  double solid_mass = 0.;
+  foreach (reduction(+:solid_mass))
+    solid_mass += (f[]-porosity[])*rhoS*dv();
+
+  
+  //average temperature of the surface
+  double Tsurf_avg = 0.; 
+  int count = 0;
+  foreach(reduction(+:Tsurf_avg)reduction(+:count)) {
+    if (f[] > F_ERR && f[] < 1.-F_ERR) {
+      Tsurf_avg += TInt[];
+      count++;
+    }
+  }
+  Tsurf_avg /= count;
+
+  double Tcore  = interpolate (T, 0., 0.);
+  double Th2    = interpolate (T, H0/2, 0);
+
+ /* //vertical shrinking
+  double r = 0.;
+  coord p;
+  coord region[2] = {{0, 0}, {0, L0/3.}};
+  coord sampling = {1, (1<<maxlevel)/2};
+  foreach_region (p, region, sampling, reduction(+:r))
+    r += f[];
+ */
+
+ q_sorg = q_time(a_q,b_q,t);
+  fprintf (fp, "%g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, Tcore, Th2, Tsurf_avg, q_sorg); 
+            // radius/(D0/2.)  r/r0);
+
+  fflush(fp);
+}
+
+#if TREE
+event adapt (i++) {
+  scalar inert = YGList_G[OpenSMOKE_IndexOfSpecies ("N2")];
+  adapt_wavelet_leave_interface ({T, u.x, u.y, inert}, {f},
+    (double[]){1.e0, 1.e-1, 1.e-1, 1e-1}, maxlevel, minlevel, 2);
+}
+#endif
+
+event stop (t = tend);
