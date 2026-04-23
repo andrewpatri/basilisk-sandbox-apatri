@@ -13,12 +13,12 @@
 #ifndef T_ENV
 # define T_ENV 773
 #endif
- /* ifndef a_q
- # define a_q 20
-#endif */
-/* ifndef b_q
- # define b_q 20
-#endif */
+#ifndef a_q
+# define a_q 0.28
+#endif
+#ifndef b_q
+# define b_q 1.79
+#endif 
 
 // include section
 
@@ -30,54 +30,51 @@
 #include "multicomponent-varprop.h" // for all the define for the properties MAYBE CHANGE TO USE MODIFIED DATA
 #include "darcy.h" // to take into account flow resistance due to porosity
 #include "view.h"
-
+#include "superquadric.h"
 // dati base
-//double Uin = 0.; //no velocity in exp
+double Uin = 0.; //no velocity in exp
 double tend = 600.; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
 
 // Boundary condition
-u.n[right]    = dirichlet (0.);
-u.t[right]    = dirichlet (0.);
-p[right]      = neumann (0.);
-pf[right]     = neumann (0.);
+u.n[right]    = neumann (0.);
+u.t[right]    = neumann (0.);
+p[right]      = dirichlet (0.);
+pf[right]     = dirichlet (0.);
 psi[right]    = dirichlet (0.);
 
-u.n[top]      = dirichlet (0.);
-u.t[top]      = dirichlet (0.);
-p[top]        = neumann (0.);
-pf[top]       = neumann (0.);
+u.n[top]      = neumann (0.);
+u.t[top]      = neumann (0.);
+p[top]        = dirichlet (0.);
+pf[top]       = dirichlet (0.);
 psi[top]      = dirichlet (0.);
-  		
 
-
-u.n[left]    = neumann (0.);
-u.t[left]    = neumann (0.);
-p[left]      = dirichlet (0.);
-pf[left]     = dirichlet (0.);
+u.n[left]    = dirichlet (0.);
+u.t[left]    = dirichlet (0.);
+p[left]      = neumann(0.);
+pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-u.n[bottom]      = neumann (0.);
-u.t[bottom]      = neumann (0.);
+/*u.n[bottom]      = dirichlet (0.);
+u.t[bottom]      = dirichlet (0.);
 p[bottom]        = neumann (0.);
-pf[bottom]       = neumann (0.);
+pf[bottom]       = neumann(0.);
 psi[bottom]      = neumann (0.);
+*/
 
-
-
-
-#define q_time(a,b,t)(a*pow(t,b));
+#define q_time(a,b,t)(a*pow(t,b))
 // q sorg 
 double q_sorg; 
-
+# define t_time(T,dt)(T*dT) 
 int maxlevel = 7; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
+double Temperatura_daupdate = T_ENV;
 
 int main() {
   
   lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
   lambdaSmodel = L_HUANG;
-  
+  TS0 = 300.; TG0 = T_ENV; // the change this to 300 K
   rhoS = 720;  // kg/m3
   eps0 = 0.39;
 
@@ -87,14 +84,8 @@ int main() {
 
   zeta_policy = ZETA_CONST;
 
-/*#if TREE
-  L0 = 4e-2*3;
-#else
-  int n_proc = 3;
-  size((4e-2)*n_proc);
-  dimensions(nx=n_proc, ny=1);
-#endif */
-L0 = H0*2; // first try just the block of wood
+
+L0 = H0*4; // first try just the block of wood
   
 
 origin (0, 0);
@@ -107,15 +98,20 @@ origin (0, 0);
   run();
 }
 
-#define rectangle(x,y,H0)(fabs(x)<H0 && fabs(y)<2*H0);
+#define rectangle(x,y,H0)()
+#define circle(x,y,R)(sq(R) - sq(x) - sq(y))
+/*//#define unione(a,b) ((a) > (b) ? (a) : (b))
 
+// Quadrato 1: centro (0., 0.), lato H0
+#define phi1(x,y,H0)(min(H0/2-fabs(x),-fabs(y)+H0/2))
+
+// Quadrato 2: centro (0, H0), lato 0.2
+#define phi2(x,y,H0)(max( fabs(x), fabs(y - H0)-H0))*/
 event init(i=0) {
-/*#if TREE
-  mask (y > 4e-2 ? top : none);
-#endif
-*/
-  fraction (f, rectangle (x, y, H0));
 
+  // fraction(f, circle(x,y,H0));
+  fraction (f, superquadric(x, y, 20, H0, 2*H0));
+  // fraction (f,phi1(x,y,H0));
   gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1.;
   gas_start[OpenSMOKE_IndexOfSpecies ("TAR")] = 0.;
   gas_start[OpenSMOKE_IndexOfSpecies ("H2O")] = 0.;
@@ -125,44 +121,49 @@ event init(i=0) {
 
   foreach()
     porosity[] = eps0*f[];
-
+	
   solid_mass0 = 0.;
   foreach (reduction(+:solid_mass0))
     solid_mass0 += (f[]-porosity[])*rhoS*dv(); //Note: (1-e) = (1-ef)!= (1-e)f
-
+	
+  fprintf(stderr, "DEBUG = %g\n", solid_mass0);
   for (int jj=0; jj<NGS; jj++) {
     scalar YG = YGList_G[jj];
     if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
-      YG[left] = dirichlet (1.);
+      YG[right] = dirichlet (1.);
     } else {
-      YG[left] = dirichlet (0.);
+      YG[right] = dirichlet (0.);
     }
   }
 
   foreach()
     u.x[] = f[] > F_ERR ? 0. : Uin;
+// Temperature
 
-  // foreach()
-    //T[] = f[] > F_ERR ? TS0 : TG0; // then set to TS0 o TG0 a 300k
-  // Temperature 
-    TS0 = 300.; TG0 = T_ENV; // the change this to 300 K
-    TG[right] = dirichlet (TG0); // neumann(0.); to use when then setting T0 in gas phase
-    TG[left] = neumann (0);
-    TG[top] = dirichlet (TG0); // neumann(0.);
-    TG[bottom] = neumann(0.);
-  /*//vertical shrinking no need for data but nice to see
-  r0 = 0.;
-  coord p;
-  coord regionvert[2] = {{0, 0}, {0, L0}};
-  coord samplingvert = {1, (1<<maxlevel)/2  };
-  foreach_region (p, regionvert, samplingvert, reduction(+:r0))
-    r0 += f[];*/
-
+    TG[right] = dirichlet(TG0);// to use when then setting T0 in gas phase
+    TG[left] = neumann (0.);
+    TG[top] =  neumann(0.);
+  //  TG[bottom] = neumann(0.);
+ 
     q_sorg = q_time(a_q,b_q,t);
+   fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
 }
+/*event T_update(t += 0.5){
+	Temperatura_daupdate = Temperatura_daupdate*1.01;
+	TG[right] = Temperatura_daupdate;
+}*/
 
+/*event movie(t += 1){
+clear();
+cells();
+view();
+squares("T", spread=-1,linear = true, min =TS0, max = TG0*1.2);
+draw_vof("f");
+
+save("T.mp4");
+}*/
 event output (t += 1) {
-  //fprintf (stderr, "%g\n", t);
+  fprintf (stderr, "%g\n", t);
 
   char name[80];
   sprintf(name, "OutputData_T1-%d", maxlevel);
@@ -172,34 +173,32 @@ event output (t += 1) {
   double solid_mass = 0.;
   foreach (reduction(+:solid_mass))
     solid_mass += (f[]-porosity[])*rhoS*dv();
-
+ fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
   
-  //average temperature of the surface
+/*  //average temperature of the surface
   double Tsurf_avg = 0.; 
   int count = 0;
   foreach(reduction(+:Tsurf_avg)reduction(+:count)) {
-    if (f[] > F_ERR && f[] < 1.-F_ERR) {
-      Tsurf_avg += TInt[];
-      count++;
-    }
-  }
-  Tsurf_avg /= count;
+  	 if (f[] > F_ERR && f[] < 1.-F_ERR) {
+   	Tsurf_avg += TInt[];
+    	  count++;
+   	}
+     }
+    Tsurf_avg /= count;
+fprintf (stderr, "DEBUG Tsurf= %g\n", Tsurf_avg);
+*/
 
   double Tcore  = interpolate (T, 0., 0.);
+fprintf (stderr, "DEBUG Tcore= %g\n", Tcore);
+
   double Th2    = interpolate (T, H0/2, 0);
-
- /* //vertical shrinking
-  double r = 0.;
-  coord p;
-  coord region[2] = {{0, 0}, {0, L0/3.}};
-  coord sampling = {1, (1<<maxlevel)/2};
-  foreach_region (p, region, sampling, reduction(+:r))
-    r += f[];
- */
-
+fprintf (stderr, "DEBUG Th2= %g\n", Th2);
+ 
  q_sorg = q_time(a_q,b_q,t);
-  fprintf (fp, "%g %g %g %g %g %g\n", 
-            t, solid_mass/solid_mass0, Tcore, Th2, Tsurf_avg, q_sorg); 
+ fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+
+  fprintf (fp, "%g %g\n", 
+            t, solid_mass/solid_mass0);//,// Tcore, Th2, Tsurf_avg, q_sorg); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
