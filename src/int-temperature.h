@@ -3,7 +3,7 @@
 This header contains the implementation of the solver for the interface temperature.
 We exploit the GSL library to solve the non-linear equation for the interface temperature.
 
-This a modifid version of Riccardo Caraccio's one in order to accomodate a q source at the interface of solid anche gas
+This a modifid version of Riccardo Caraccio's one in order to accomodate a q_sorg [in W/m2] at the interface of solid anche gas here it is constant at any point so it is a double not a scalar, if not uncomment the comment close to it
 https://github.com/Riccaraccio/basilisk-sandbox-rcaraccio/blob/master/src/int-temperature.h
 */
 
@@ -23,6 +23,7 @@ extern face vector fsS, fsG;
 extern vector lambda1v, lambda2v;
 extern double TG0;
 extern scalar TInt, TS, TG;
+extern double q_sorg; // extern scalar q_sorg
 
 typedef struct {
   coord c;
@@ -86,11 +87,13 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
 
   double lambda1vh = n.x / (n.x + n.y) * lambda1v.x[] + n.y / (n.x + n.y) * lambda1v.y[];
   double lambda2vh = n.x / (n.x + n.y) * lambda2v.x[] + n.y / (n.x + n.y) * lambda2v.y[];
-
+ 
+  double q_sorgi = q_sorg; // double q_sorgi = q_sorg[]; // here i stands for the value in the the point
   gsl_vector_set(fdata, 0,
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
-                 + lambda2vh * gradTGn);
+                 + lambda2vh * gradTGn
+                 + q_sorgi);
   // }
   return GSL_SUCCESS;
 }
