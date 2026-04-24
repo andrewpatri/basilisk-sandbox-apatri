@@ -23,7 +23,7 @@ extern face vector fsS, fsG;
 extern vector lambda1v, lambda2v;
 extern double TG0;
 extern scalar TInt, TS, TG;
-extern double a_q, b_q; // 
+
 
 typedef struct {
   coord c;
