@@ -54,13 +54,6 @@ p[left]      = neumann(0.);
 pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-/*u.n[bottom]      = dirichlet (0.);
-u.t[bottom]      = dirichlet (0.);
-p[bottom]        = neumann (0.);
-pf[bottom]       = neumann(0.);
-psi[bottom]      = neumann (0.);
-*/
-
 #define q_time(a,b,t)(a*pow(t,b))
 // q sorg 
 double q_sorg; 
@@ -70,7 +63,7 @@ double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
 double solid_mass_old;
 double AREA_FACCIA = 0.;
-
+double solid_mass = 0.;
 int main() {
   
   lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
@@ -94,8 +87,12 @@ origin (0, 0);
   DT = 1e-1;
 
   shift_prod = true;
-  kinfolder = "biomass/dummy-solid";
+  kinfolder = "biomass/dummy-solid-gas";
   init_grid(1 << maxlevel);
+
+  q_sorg = q_time(a_q,b_q,t);
+ fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+
   run();
 }
 
@@ -105,9 +102,13 @@ event init(i=0) {
 
   // fraction(f, circle(x,y,H0));
   fraction (f, superquadric(x, y, 20, H0, 2*H0));
-  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1.;
+
+  // dummy-solid-gas no info of h20 in air
+  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.787545;
   gas_start[OpenSMOKE_IndexOfSpecies ("TAR")] = 0.;
   gas_start[OpenSMOKE_IndexOfSpecies ("H2O")] = 0.;
+  gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.212031;
+  gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.000424;
   
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
@@ -138,8 +139,8 @@ event init(i=0) {
     TG[top] =  neumann(0.);
   //  TG[bottom] = neumann(0.);
  
-    //q_sorg = q_time(a_q,b_q,t);
-   //fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+    q_sorg = q_time(a_q,b_q,t);
+   fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
   AREA_FACCIA = 4.*H0*H0*M_PI;
 }
 
@@ -158,7 +159,7 @@ event output (t += 1) {
   char name[80];
   sprintf(name, "OutputData_T1-%d", maxlevel);
   static FILE * fp = fopen (name, "w");
- double solid_mass = 0.;
+ 
   if ( t == 1 ) {
 	solid_mass_old = solid_mass0;
   } else {
@@ -175,6 +176,7 @@ event output (t += 1) {
  double rate = 0;
  rate = (solid_mass_old - solid_mass)*4.*1e-3/AREA_FACCIA; // g/m2/s 
  fprintf (stderr, "DEBUG rate = %g\n", rate);
+
 // T on the surface
 double T_surf = 0.;
 foreach(reduction(+:T_surf)){
@@ -198,17 +200,16 @@ fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
 fprintf (stderr, "DEBUG Tsurf= %g\n", Tsurf_avg);
 
 
-  double Tcore  = interpolate (T, 0., 0.);
-fprintf (stderr, "DEBUG Tcore= %g\n", Tcore);
+  double T6mm  = interpolate (T, 6e-3, 0.);
+fprintf (stderr, "DEBUG Tcore= %g\n", T6mm);
 
-  double Th2    = interpolate (T, H0/2, 0);
-fprintf (stderr, "DEBUG Th2= %g\n", Th2);
+  double T3mm    = interpolate (T, H0-(3e-3), 0);
+fprintf (stderr, "DEBUG Th2= %g\n", T3mm);
  
- q_sorg = q_time(a_q,b_q,t);
- fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+ 
 
-  fprintf (fp, "%g %g %g %g %g %g %g\n", 
-            t, solid_mass/solid_mass0, Tcore, Th2, Tsurf_avg, T_surf, q_sorg); 
+  fprintf (fp, "%g %g %g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, q_sorg, rate); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
