@@ -93,7 +93,7 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
                  + lambda2vh * gradTGn
-                 + q_sorgi);
+                 + q_sorgi * emissivity);
   // }
   return GSL_SUCCESS;
 }
