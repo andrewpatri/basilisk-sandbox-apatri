@@ -27,7 +27,7 @@
 #include "opensmoke-properties.h" // properties
 #include "two-phase.h"// for VOF and defines fraction and colors
 #include "shrinking.h" // shriniking models ATTENTION choose the good one remember to define
-#include "multicomponent-varprop.h" // for all the define for the properties MAYBE CHANGE TO USE MODIFIED DATA
+#include "multicomponent-varprop-mod.h" // for all the define for the properties MAYBE CHANGE TO USE MODIFIED DATA
 #include "darcy.h" // to take into account flow resistance due to porosity
 #include "view.h"
 #include "superquadric.h"
@@ -208,11 +208,11 @@ fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
 fprintf (stderr, "DEBUG Tsurf= %g\n", Tsurf_avg);
 
 
-  double T6mm  = interpolate (T, 6e-3, 0.);
-fprintf (stderr, "DEBUG Tcore= %g\n", T6mm);
+  double T6mm  = interpolate (T, H0-(6e-3), 0.);
+fprintf (stderr, "DEBUG T6mm= %g\n", T6mm);
 
   double T3mm    = interpolate (T, H0-(3e-3), 0);
-fprintf (stderr, "DEBUG Th2= %g\n", T3mm);
+fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
  
  
 
