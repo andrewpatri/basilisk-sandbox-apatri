@@ -68,7 +68,8 @@ double q_sorg;
 int maxlevel = 7; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
-//double Temperatura_daupdate = T_ENV;
+double solid_mass_old;
+double AREA_FACCIA = 0.;
 
 int main() {
   
@@ -100,18 +101,10 @@ origin (0, 0);
 
 #define rectangle(x,y,H0)()
 //#define circle(x,y,R)(sq(R) - sq(x) - sq(y))
-/*//#define unione(a,b) ((a) > (b) ? (a) : (b))
-
-// Quadrato 1: centro (0., 0.), lato H0
-#define phi1(x,y,H0)(min(H0/2-fabs(x),-fabs(y)+H0/2))
-
-// Quadrato 2: centro (0, H0), lato 0.2
-#define phi2(x,y,H0)(max( fabs(x), fabs(y - H0)-H0))*/
 event init(i=0) {
 
   // fraction(f, circle(x,y,H0));
   fraction (f, superquadric(x, y, 20, H0, 2*H0));
-  // fraction (f,phi1(x,y,H0));
   gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1.;
   gas_start[OpenSMOKE_IndexOfSpecies ("TAR")] = 0.;
   gas_start[OpenSMOKE_IndexOfSpecies ("H2O")] = 0.;
@@ -147,11 +140,8 @@ event init(i=0) {
  
     //q_sorg = q_time(a_q,b_q,t);
    //fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+  AREA_FACCIA = 4.*H0*H0*M_PI;
 }
-/*event T_update(t += 0.5){
-	Temperatura_daupdate = Temperatura_daupdate*1.01;
-	TG[right] = Temperatura_daupdate;
-}*/
 
 /*event movie(t += 1){
 clear();
@@ -163,24 +153,36 @@ draw_vof("f");
 save("T.mp4");
 }*/
 event output (t += 1) {
-  //fprintf (stderr, "%g\n", t);
+  fprintf (stderr, "%g\n", t);
 
   char name[80];
   sprintf(name, "OutputData_T1-%d", maxlevel);
   static FILE * fp = fopen (name, "w");
-
+ double solid_mass = 0.;
+  if ( t == 1 ) {
+	solid_mass_old = solid_mass0;
+  } else {
+	solid_mass_old = solid_mass;
+  }
+   fprintf (stderr, "DEBUG old = %g\n", solid_mass_old);			
   //log mass profile
-  double solid_mass = 0.;
+  
   foreach (reduction(+:solid_mass))
     solid_mass += (f[]-porosity[])*rhoS*dv();
+    
  fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
- 
- 
-/ T on the surface
+ fprintf (stderr, "DEBUG AREA_FACCIA = %g\n", AREA_FACCIA); 
+ double rate = 0;
+ rate = (solid_mass_old - solid_mass)*4.*1e-3/AREA_FACCIA; // g/m2/s 
+ fprintf (stderr, "DEBUG rate = %g\n", rate);
+// T on the surface
 double T_surf = 0.;
-if (f[]>F_ERR && f[] < 1.-F_ERR && y < F_ERR){
+foreach(reduction(+:T_surf)){
+ if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta){
   
-T_surf = TInt[];
+     
+  T_surf = TInt[];
+ }
 }
 fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
 //average temperature of the surface
@@ -205,8 +207,8 @@ fprintf (stderr, "DEBUG Th2= %g\n", Th2);
  q_sorg = q_time(a_q,b_q,t);
  fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
 
-  fprintf (fp, "%g %g\n", 
-            t, solid_mass/solid_mass0);//,// Tcore, Th2, Tsurf_avg, q_sorg); 
+  fprintf (fp, "%g %g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, Tcore, Th2, Tsurf_avg, T_surf, q_sorg); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
