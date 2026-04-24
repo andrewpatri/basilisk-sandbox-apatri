@@ -126,13 +126,13 @@ event init(i=0) {
     if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
       YG[right] = dirichlet (0.787545);
       YG[top] = dirichlet(0.787545);     
-    } elseif { (jj == OpenSMOKE_IndexOfSpecies ("O2"))
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
       YG[right] = dirichlet (0.212031);
       YG[top] = dirichlet(0.212031); 
-    }elseif { (jj == OpenSMOKE_IndexOfSpecies ("CO2"))
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
       YG[right] = dirichlet (0.000424);
       YG[top] = dirichlet(0.000424); 
-  }else {
+     } else {
       YG[right] = dirichlet (0.);
       YG[top] = dirichlet(0.);
     }
@@ -175,7 +175,7 @@ event output (t += 1) {
   }
    fprintf (stderr, "DEBUG old = %g\n", solid_mass_old);			
   //log mass profile
-  
+  solid_mass = 0;
   foreach (reduction(+:solid_mass))
     solid_mass += (f[]-porosity[])*rhoS*dv();
     
