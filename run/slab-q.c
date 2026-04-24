@@ -11,7 +11,7 @@
 // ifndef section, here i would implement the possibility to change the q source, but need to be refined since it is a power 
 // at this stage T_ENV so i can test the geometry 
 #ifndef T_ENV
-# define T_ENV 773
+# define T_ENV 323
 #endif
 #ifndef a_q
 # define a_q 0.28
@@ -79,7 +79,7 @@ int main() {
   zeta_policy = ZETA_CONST;
 
 
-L0 = H0*4; // first try just the block of wood
+L0 = H0*5.001; // first try just the block of wood
   
 
 origin (0, 0);
@@ -90,8 +90,8 @@ origin (0, 0);
   kinfolder = "biomass/dummy-solid-gas";
   init_grid(1 << maxlevel);
 
-  q_sorg = q_time(a_q,b_q,t);
- fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+  // q_sorg = q_time(a_q,b_q,t);
+  // fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
 
   run();
 }
@@ -142,7 +142,7 @@ event init(i=0) {
     u.x[] = f[] > F_ERR ? 0. : Uin;
 // Temperature
 
-    TG[right] = dirichlet(TG0);// to use when then setting T0 in gas phase
+    TG[right] = neumann(0.); // dirichlet(TG0);// to use when then setting T0 in gas phase
     TG[left] = neumann (0.);
     TG[top] =  neumann(0.);
   //  TG[bottom] = neumann(0.);
@@ -160,7 +160,12 @@ squares("T", spread=-1,linear = true, min =TS0, max = TG0*1.2);
 draw_vof("f");
 
 save("T.mp4");
-}*/
+}*/ 
+
+event update_q (t += 1){
+  q_sorg = q_time(a_q,b_q,t);
+ fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+}
 event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
@@ -182,7 +187,7 @@ event output (t += 1) {
  fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
  fprintf (stderr, "DEBUG AREA_FACCIA = %g\n", AREA_FACCIA); 
  double rate = 0;
- rate = (solid_mass_old - solid_mass)*4.*1e-3/AREA_FACCIA; // g/m2/s 
+ rate = (solid_mass_old - solid_mass)*4.*1e3/AREA_FACCIA; // g/m2/s 
  fprintf (stderr, "DEBUG rate = %g\n", rate);
 
 // T on the surface
