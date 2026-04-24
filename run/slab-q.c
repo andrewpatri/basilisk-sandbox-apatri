@@ -64,11 +64,11 @@ psi[bottom]      = neumann (0.);
 #define q_time(a,b,t)(a*pow(t,b))
 // q sorg 
 double q_sorg; 
-# define t_time(T,dt)(T*dT) 
+//# define t_time(T,dt)(T*dT) 
 int maxlevel = 7; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
-double Temperatura_daupdate = T_ENV;
+//double Temperatura_daupdate = T_ENV;
 
 int main() {
   
@@ -99,7 +99,7 @@ origin (0, 0);
 }
 
 #define rectangle(x,y,H0)()
-#define circle(x,y,R)(sq(R) - sq(x) - sq(y))
+//#define circle(x,y,R)(sq(R) - sq(x) - sq(y))
 /*//#define unione(a,b) ((a) > (b) ? (a) : (b))
 
 // Quadrato 1: centro (0., 0.), lato H0
@@ -145,8 +145,8 @@ event init(i=0) {
     TG[top] =  neumann(0.);
   //  TG[bottom] = neumann(0.);
  
-    q_sorg = q_time(a_q,b_q,t);
-   fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
+    //q_sorg = q_time(a_q,b_q,t);
+   //fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
 }
 /*event T_update(t += 0.5){
 	Temperatura_daupdate = Temperatura_daupdate*1.01;
@@ -163,7 +163,7 @@ draw_vof("f");
 save("T.mp4");
 }*/
 event output (t += 1) {
-  fprintf (stderr, "%g\n", t);
+  //fprintf (stderr, "%g\n", t);
 
   char name[80];
   sprintf(name, "OutputData_T1-%d", maxlevel);
@@ -173,9 +173,14 @@ event output (t += 1) {
   double solid_mass = 0.;
   foreach (reduction(+:solid_mass))
     solid_mass += (f[]-porosity[])*rhoS*dv();
- fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
-  
-/*  //average temperature of the surface
+ //fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
+ 
+ 
+/ T on the surface
+double T_surf = 0.;
+T_surf = TInt[x,0];
+fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
+//average temperature of the surface
   double Tsurf_avg = 0.; 
   int count = 0;
   foreach(reduction(+:Tsurf_avg)reduction(+:count)) {
@@ -186,7 +191,7 @@ event output (t += 1) {
      }
     Tsurf_avg /= count;
 fprintf (stderr, "DEBUG Tsurf= %g\n", Tsurf_avg);
-*/
+
 
   double Tcore  = interpolate (T, 0., 0.);
 fprintf (stderr, "DEBUG Tcore= %g\n", Tcore);
