@@ -173,12 +173,15 @@ event output (t += 1) {
   double solid_mass = 0.;
   foreach (reduction(+:solid_mass))
     solid_mass += (f[]-porosity[])*rhoS*dv();
- //fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
+ fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
  
  
 / T on the surface
 double T_surf = 0.;
-T_surf = TInt[x,0];
+if (f[]>F_ERR && f[] < 1.-F_ERR && y < F_ERR){
+  
+T_surf = TInt[];
+}
 fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
 //average temperature of the surface
   double Tsurf_avg = 0.; 
