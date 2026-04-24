@@ -124,9 +124,17 @@ event init(i=0) {
   for (int jj=0; jj<NGS; jj++) {
     scalar YG = YGList_G[jj];
     if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
-      YG[right] = dirichlet (1.);
-    } else {
+      YG[right] = dirichlet (0.787545);
+      YG[top] = dirichlet(0.787545);     
+    } elseif { (jj == OpenSMOKE_IndexOfSpecies ("O2"))
+      YG[right] = dirichlet (0.212031);
+      YG[top] = dirichlet(0.212031); 
+    }elseif { (jj == OpenSMOKE_IndexOfSpecies ("CO2"))
+      YG[right] = dirichlet (0.000424);
+      YG[top] = dirichlet(0.000424); 
+  }else {
       YG[right] = dirichlet (0.);
+      YG[top] = dirichlet(0.);
     }
   }
 
