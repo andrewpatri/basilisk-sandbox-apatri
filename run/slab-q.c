@@ -7,11 +7,12 @@
 #define MOLAR_DIFFUSION 1 // use molar diffusion instead of mass
 #define FICK_CORRECTED 1 // enable fick correction for multicomponent
 #define MASS_DIFFUSION_ENTHALPY 1 // enable enthalpic contribution to mass  flux 
+#define QSORG_POWER 1
 
 // ifndef section, here i would implement the possibility to change the q source, but need to be refined since it is a power 
 // at this stage T_ENV so i can test the geometry 
 #ifndef T_ENV
-# define T_ENV 323
+# define T_ENV 300
 #endif
 #ifndef a_q
 # define a_q 0.28

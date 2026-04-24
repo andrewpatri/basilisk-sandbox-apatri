@@ -23,7 +23,7 @@ extern face vector fsS, fsG;
 extern vector lambda1v, lambda2v;
 extern double TG0;
 extern scalar TInt, TS, TG;
-
+ 
 
 typedef struct {
   coord c;
@@ -64,11 +64,22 @@ double emissivity_constant (const double char_fraction, const double ash_fractio
 
 double (*emissivity) (const double char_fraction, const double ash_fraction) = NULL;
 
+#if QSORG_POWER
+ double q_sorg (const double t){
+   const double a = a_q; 
+   const double b = b_q;
+   return a*pow((t + F_ERR), b);  
+ }
+#elif QSORG_CONST
 double q_sorg (const double t){
-  const double a = a_q;
-  const double b = b_q;
-  return a*pow(t + F_ERR, b);  // b must be alwasy > 0 otherwise a/0 
-}
+   
+   return QSORG_CONST;  
+ }
+ #else 
+ double q_sorg (const double t){
+  return 0.;
+ }
+#endif
 
 event defaults (i = 0) {
   if (emissivity == NULL)
