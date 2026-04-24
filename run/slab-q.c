@@ -54,10 +54,6 @@ p[left]      = neumann(0.);
 pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-#define q_time(a,b,t)(a*pow(t,b))
-// q sorg 
-double q_sorg; 
-//# define t_time(T,dt)(T*dT) 
 int maxlevel = 7; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
@@ -89,9 +85,6 @@ origin (0, 0);
   shift_prod = true;
   kinfolder = "biomass/dummy-solid-gas";
   init_grid(1 << maxlevel);
-
-  // q_sorg = q_time(a_q,b_q,t);
-  // fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
 
   run();
 }
@@ -147,9 +140,7 @@ event init(i=0) {
     TG[top] =  neumann(0.);
   //  TG[bottom] = neumann(0.);
  
-    q_sorg = q_time(a_q,b_q,t);
-   fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
-  AREA_FACCIA = 4.*H0*H0*M_PI;
+    AREA_FACCIA = 4.*H0*H0*M_PI;
 }
 
 /*event movie(t += 1){
@@ -162,10 +153,7 @@ draw_vof("f");
 save("T.mp4");
 }*/ 
 
-event update_q (t += 1){
-  q_sorg = q_time(a_q,b_q,t);
- fprintf(stderr, "DEBUG q_sorginizio =%g\n", q_sorg);
-}
+
 event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
@@ -221,8 +209,8 @@ fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
  
  
 
-  fprintf (fp, "%g %g %g %g %g %g %g %g\n", 
-            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, q_sorg, rate); 
+  fprintf (fp, "%g %g %g %g %g %g %g \n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
