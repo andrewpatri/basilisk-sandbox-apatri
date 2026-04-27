@@ -84,7 +84,7 @@ origin (0, 0);
   DT = 1e-1;
 
   shift_prod = true;
-  kinfolder = "biomass/dummy-solid-gas";
+  kinfolder = "biomass/Solid-gas-88";
   init_grid(1 << maxlevel);
 
   run();
@@ -104,8 +104,15 @@ event init(i=0) {
   gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.212031;
   gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.000424;
   
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.5078;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("HYHW")]  = 0.3385;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0171;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0171;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0095;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0897;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0162;
 
   foreach()
     porosity[] = eps0*f[];
