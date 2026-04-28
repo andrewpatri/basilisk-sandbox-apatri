@@ -34,7 +34,7 @@
 #include "superquadric.h"
 // dati base
 double Uin = 0.; //no velocity in exp
-double tend = 600.; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
+double tend = 800.; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
 
 // Boundary condition
 u.n[right]    = neumann (0.);
@@ -99,20 +99,18 @@ event init(i=0) {
 
   // dummy-solid-gas no info of h20 in air
   gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.787545;
-  gas_start[OpenSMOKE_IndexOfSpecies ("TAR")] = 0.;
-  gas_start[OpenSMOKE_IndexOfSpecies ("H2O")] = 0.;
   gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.212031;
   gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.000424;
   
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.5078;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("HYHW")]  = 0.3385;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0171;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0171;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0095;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.5165;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.3388;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0146;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0146;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0094;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0897;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0162;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0164;
 
   foreach()
     porosity[] = eps0*f[];
@@ -217,8 +215,8 @@ fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
  
  
 
-  fprintf (fp, "%g %g %g %g %g %g %g \n", 
-            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate); 
+  fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate,q_sorg); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
