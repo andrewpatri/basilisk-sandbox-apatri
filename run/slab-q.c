@@ -104,13 +104,15 @@ event init(i=0) {
   
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.5165;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.3388;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0146;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0146;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0094;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0897;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0164;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.3723;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2482;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.1583;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0003;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0396;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0162;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("TANN")]  = 0.0742;
+
 
   foreach()
     porosity[] = eps0*f[];
@@ -149,15 +151,15 @@ event init(i=0) {
     AREA_FACCIA = 4.*H0*H0*M_PI;
 }
 
-/*event movie(t += 1){
+event movie(t += 1){
 clear();
 cells();
 view();
-squares("T", spread=-1,linear = true, min =TS0, max = TG0*1.2);
+squares("T", spread=-1,linear = true, min =TS0, max = 850);
 draw_vof("f");
 
 save("T.mp4");
-}*/ 
+} 
 
 
 event output (t += 1) {
@@ -213,10 +215,10 @@ fprintf (stderr, "DEBUG T6mm= %g\n", T6mm);
   double T3mm    = interpolate (T, H0-(3e-3), 0);
 fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
  
- 
+ q = q_sorg(t);
 
   fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
-            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate,q_sorg); 
+            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, q); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
