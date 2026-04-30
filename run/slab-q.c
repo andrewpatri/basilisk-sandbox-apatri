@@ -166,7 +166,7 @@ event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
   char name[80];
-  sprintf(name, "OutputData_T1-%d", maxlevel);
+  sprintf(name, "OutputData-%g-%g", a_q, b_q);
   static FILE * fp = fopen (name, "w");
  
   if ( t == 1 ) {
@@ -214,7 +214,7 @@ fprintf (stderr, "DEBUG T6mm= %g\n", T6mm);
 
   double T3mm    = interpolate (T, H0-(3e-3), 0);
 fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
- 
+double q;  
  q = q_sorg(t);
 
   fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
@@ -233,3 +233,7 @@ event adapt (i++) {
 #endif
 
 event stop (t = tend);
+
+
+
+
