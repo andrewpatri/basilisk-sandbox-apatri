@@ -160,14 +160,13 @@ draw_vof("f");
 
 save("T.mp4");
 } 
-
+#define qagg(a_q,b_q,t)( a_q*pow((t+F_ERR),b_q))
 event aggq (i++){
-  define qagg(a_q,b_q,t) = a_q*pow((t+F_ERR,b_q))
   double q;
   q = qagg(a_q,b_q,t);
-  foreach(reduction(+:q_source))
-  if(x> (3*H0 - delta) && x<(3*H0 +delta) ){
-    q_source = q;
+  foreach()
+  if(x> (3*H0 - Delta) && x<(3*H0 +Delta) ){
+    q_source[] = q;
   }
 }
 event output (t += 1) {
@@ -222,10 +221,12 @@ fprintf (stderr, "DEBUG T6mm= %g\n", T6mm);
 
   double T3mm    = interpolate (T, H0-(3e-3), 0);
 fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
-  
+
+double qqq;
+ qqq = qagg(a_q,b_q,t);
 
   fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
-            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, q); 
+            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, qqq); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
