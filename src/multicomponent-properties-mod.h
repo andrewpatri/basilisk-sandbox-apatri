@@ -5,7 +5,6 @@ Update the thermodynamic properties for the multicomponent phase
 change model, and compute the lagrangian derivative of the density,
 which is used as a sorce term for the velocity divergence, to
 describe low Mach compressibility effects. */
-// This version will be modified to accomodate a q_source at any point, UoM [W/m2]
 
 #ifdef VARPROP
 #include "solid-thermal-conductivity.h"
@@ -15,9 +14,7 @@ extern scalar porosity;
 scalar DTDtS[], DTDtG[];
 scalar * DYDtG_G = NULL;
 scalar * DYDtG_S = NULL;
-
 scalar q_source[];
-
 trace
 void update_properties (void) {
 
@@ -170,18 +167,15 @@ event init (i = 0) {
   }
   reset (DYDtG_S, 0.);
 
-  MWmixG_G.dirty = true;
-  MWmixG_S.dirty = true;
-
 #if TREE
   for (scalar s in {drhodt}) {
 #if EMBED
-    s.refine = s.prolongation = refine_embed_linear;
+    s.refine = refine_embed_linear;
+    set_prolongation (s, refine_embed_linear);
 #else
     s.refine  = refine_linear;
 #endif
-    s.restriction = restriction_volume_average;
-    s.dirty = true; // boundary conditions need to be updated
+    set_restriction (s, restriction_volume_average);
   }
 #endif
 }
@@ -239,8 +233,8 @@ void update_divergence (void) {
     foreach_dimension()
       DTDtG[] += (lambdagradTG.x[1] - lambdagradTG.x[])/Delta;
     DTDtG[] += sGT[];
-    foreach_dimension()
-      DTDtG[] += q_source[]*RADIATION_INTERFACE;
+    foreach()
+     DTDtG[] += q_source[]*RADIATION_INTERFACE;
     DTDtG[] += q_source[]*RADIATION_INTERFACE;
   }
 
