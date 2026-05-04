@@ -216,7 +216,7 @@ fprintf (stderr, "DEBUG T6mm= %g\n", T6mm);
 fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
 double q;  
  q = q_sorg(t);
-
+fprintf (stderr, "DEBUG q= %g\n", q);
   fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
             t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, q); 
             // radius/(D0/2.)  r/r0);
