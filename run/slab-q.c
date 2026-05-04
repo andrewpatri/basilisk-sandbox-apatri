@@ -12,7 +12,7 @@
 // ifndef section, here i would implement the possibility to change the q source, but need to be refined since it is a power 
 // at this stage T_ENV so i can test the geometry 
 #ifndef T_ENV
-# define T_ENV 300
+# define T_ENV 293
 #endif
 #ifndef a_q
 # define a_q 0.28
@@ -55,7 +55,7 @@ p[left]      = neumann(0.);
 pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-int maxlevel = 7; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
+int maxlevel = 9; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
 double solid_mass_old;
@@ -65,7 +65,7 @@ int main() {
   
   lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
   lambdaSmodel = L_HUANG;
-  TS0 = 300.; TG0 = T_ENV; // the change this to 300 K
+  TS0 = 293.; TG0 = T_ENV; // the change this to 300 K
   rhoS = 720;  // kg/m3
   eps0 = 0.39;
 
@@ -76,7 +76,7 @@ int main() {
   zeta_policy = ZETA_CONST;
 
 
-L0 = H0*5.001; // first try just the block of wood
+L0 = H0*15.001; // first try just the block of wood
   
 
 origin (0, 0);
@@ -84,7 +84,7 @@ origin (0, 0);
   DT = 1e-1;
 
   shift_prod = true;
-  kinfolder = "biomass/Solid-gas-88";
+  kinfolder = "biomass/Red-gas-2507";
   init_grid(1 << maxlevel);
 
   run();
@@ -151,11 +151,11 @@ event init(i=0) {
     AREA_FACCIA = 4.*H0*H0*M_PI;
 }
 
-event movie(t += 1){
+event movie(t += 2){
 clear();
 cells();
-view();
-squares("T", spread=-1,linear = true, min =TS0, max = 850);
+view(theta=0, phi=0, psi=-pi/2., width = 1080, height = 1080);
+squares("T", spread=-1,linear = true, min =TS0, max =1250 );
 draw_vof("f");
 
 save("T.mp4");
@@ -166,7 +166,7 @@ event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
   char name[80];
-  sprintf(name, "OutputData-%g-%g", a_q, b_q);
+  sprintf(name, "OutputData-293");
   static FILE * fp = fopen (name, "w");
  
   if ( t == 1 ) {
@@ -192,7 +192,7 @@ foreach(reduction(+:T_surf)){
  if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta){
   
      
-  T_surf = TInt[];
+  T_surf = TS[]/f[];
  }
 }
 fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
@@ -201,7 +201,7 @@ fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
   int count = 0;
   foreach(reduction(+:Tsurf_avg)reduction(+:count)) {
   	 if (f[] > F_ERR && f[] < 1.-F_ERR) {
-   	Tsurf_avg += TInt[];
+   	Tsurf_avg += TS[]/f[];
     	  count++;
    	}
      }
@@ -228,7 +228,7 @@ double q;
 event adapt (i++) {
   scalar inert = YGList_G[OpenSMOKE_IndexOfSpecies ("N2")];
   adapt_wavelet_leave_interface ({T, u.x, u.y, inert}, {f},
-    (double[]){1.e0, 1.e-1, 1.e-1, 1e-1}, maxlevel, minlevel, 2);
+    (double[]){1.e-1, 1.e-1, 1.e-1, 1e-1}, maxlevel, minlevel, 2);
 }
 #endif
 
