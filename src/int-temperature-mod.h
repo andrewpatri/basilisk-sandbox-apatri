@@ -64,7 +64,7 @@ double emissivity_constant (const double char_fraction, const double ash_fractio
 
 double (*emissivity) (const double char_fraction, const double ash_fraction) = NULL;
 
-#if QSORG_POWER
+/* #if QSORG_POWER
  double q_sorg (const double t){
    const double a = a_q; 
    const double b = b_q;
@@ -80,7 +80,7 @@ double q_sorg (const double t){
   return 0.;
  }
 #endif
-
+*/
 event defaults (i = 0) {
   if (emissivity == NULL)
     emissivity = emissivity_constant;
@@ -105,12 +105,18 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
 
   double lambda1vh = n.x / (n.x + n.y) * lambda1v.x[] + n.y / (n.x + n.y) * lambda1v.y[];
   double lambda2vh = n.x / (n.x + n.y) * lambda2v.x[] + n.y / (n.x + n.y) * lambda2v.y[];
- 
+   #if qsource 
     gsl_vector_set(fdata, 0,
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
                  + lambda2vh * gradTGn
                  - data->q_sorg *data->emissivity );
+   #else
+   gsl_vector_set(fdata, 0,
+                 -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
+                 + lambda1vh * gradTSn 
+                 + lambda2vh * gradTGn);
+   #endif                            
   // }
   return GSL_SUCCESS;
 }
@@ -138,9 +144,9 @@ void ijc_CoupledTemperature() {
       } else {
         data.emissivity = emissivity(char_fraction, 0.);
       }
-
+      #if qsource  
       data.q_sorg = q_sorg(t);
-
+      #endif
       fsolve_gsl (EqTemperature, unk, &data, "EqTemperature");
 
       TInt[] = gsl_vector_get(unk, 0);
