@@ -7,7 +7,7 @@
 #define MOLAR_DIFFUSION 1 // use molar diffusion instead of mass
 #define FICK_CORRECTED 1 // enable fick correction for multicomponent
 #define MASS_DIFFUSION_ENTHALPY 1 // enable enthalpic contribution to mass  flux 
-#define QSORG_POWER 1
+#define QSOURCE 1 //activate q_sorg
 
 
 // ifndef section, here i would implement the possibility to change the q source, but need to be refined since it is a power 
@@ -21,6 +21,13 @@
 #ifndef b_q
 # define b_q 1.79
 #endif 
+// function definition if they are specific
+double q_sorg (const double t){
+   const double a = a_q; 
+   const double b = b_q;
+   return a*pow((t + F_ERR), b);  
+ }
+
 
 // include section
 
@@ -29,7 +36,7 @@
 #include "opensmoke-properties.h" // properties
 #include "two-phase.h"// for VOF and defines fraction and colors
 #include "shrinking.h" // shriniking models ATTENTION choose the good one remember to define
-#include "multicomponent-varprop-mod.h" // for all the define for the properties MAYBE CHANGE TO USE MODIFIED DATA
+#include "multicomponent-varprop-mod.h" // here there is int-temp... so before this define the q_sorg
 #include "darcy.h" // to take into account flow resistance due to porosity
 #include "view.h"
 #include "superquadric.h"
