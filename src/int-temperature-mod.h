@@ -24,12 +24,18 @@ extern vector lambda1v, lambda2v;
 extern double TG0;
 extern scalar TInt, TS, TG;
  
-
+#if qsource
 typedef struct {
   coord c;
   double emissivity;
   double q_sorg;
 } UserDataNls;
+#else 
+  typedef struct {
+  coord c;
+  double emissivity;
+} UserDataNls;
+#endif
 
 #ifndef RADIATION_INTERFACE
 # define RADIATION_INTERFACE 0.85 // Gronli thesis 1996
@@ -64,23 +70,6 @@ double emissivity_constant (const double char_fraction, const double ash_fractio
 
 double (*emissivity) (const double char_fraction, const double ash_fraction) = NULL;
 
-/* #if QSORG_POWER
- double q_sorg (const double t){
-   const double a = a_q; 
-   const double b = b_q;
-   return a*pow((t + F_ERR), b);  
- }
-#elif QSORG_CONST
-double q_sorg (const double t){
-   
-   return QSORG_CONST;  
- }
- #else 
- double q_sorg (const double t){
-  return 0.;
- }
-#endif
-*/
 event defaults (i = 0) {
   if (emissivity == NULL)
     emissivity = emissivity_constant;
