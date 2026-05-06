@@ -9,13 +9,14 @@
 #define MASS_DIFFUSION_ENTHALPY 1 // enable enthalpic contribution to mass  flux 
 #define QSORG_POWER 1
 
+
 // ifndef section, here i would implement the possibility to change the q source, but need to be refined since it is a power 
 // at this stage T_ENV so i can test the geometry 
 #ifndef T_ENV
 # define T_ENV 293
 #endif
 #ifndef a_q
-# define a_q 0.28
+# define a_q 0.44
 #endif
 #ifndef b_q
 # define b_q 1.79
@@ -68,7 +69,7 @@ int main() {
   TS0 = 293.; TG0 = T_ENV; // the change this to 300 K
   rhoS = 720;  // kg/m3
   eps0 = 0.39;
-
+  emissivity = emissivity_lu;
   //dummy properties
   rho1 = 1., rho2 = 1.;
   mu1 = 1., mu2 = 1.;
@@ -76,7 +77,7 @@ int main() {
   zeta_policy = ZETA_CONST;
 
 
-L0 = H0*15.001; // first try just the block of wood
+L0 = H0*15.07; // first try just the block of wood
   
 
 origin (0, 0);
@@ -84,7 +85,7 @@ origin (0, 0);
   DT = 1e-1;
 
   shift_prod = true;
-  kinfolder = "biomass/Red-gas-2507";
+  kinfolder = "biomass/Solid-gas-2507";
   init_grid(1 << maxlevel);
 
   run();
@@ -104,14 +105,14 @@ event init(i=0) {
   
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.3723;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2482;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.1583;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0003;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0396;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0162;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("TANN")]  = 0.0742;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.2134;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.1746;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0201;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0177;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0157;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.4404;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.1181;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("TANN")]  = 0.;
 
 
   foreach()
@@ -166,7 +167,7 @@ event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
   char name[80];
-  sprintf(name, "OutputData-293");
+  sprintf(name, "OutputData-9");
   static FILE * fp = fopen (name, "w");
  
   if ( t == 1 ) {
@@ -217,6 +218,7 @@ fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
 double q;  
  q = q_sorg(t);
 fprintf (stderr, "DEBUG q= %g\n", q);
+
   fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
             t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, q); 
             // radius/(D0/2.)  r/r0);
@@ -227,8 +229,9 @@ fprintf (stderr, "DEBUG q= %g\n", q);
 #if TREE
 event adapt (i++) {
   scalar inert = YGList_G[OpenSMOKE_IndexOfSpecies ("N2")];
-  adapt_wavelet_leave_interface ({T, u.x, u.y, inert}, {f},
-    (double[]){1.e-1, 1.e-1, 1.e-1, 1e-1}, maxlevel, minlevel, 2);
+  scalar oxi = YGList_G[OpenSMOKE_IndexOfSpecies ("O2")];
+  adapt_wavelet_leave_interface ({T, u.x, u.y, inert, oxi}, {f},
+    (double[]){1.e1, 1.e-1, 1.e-1, 1e-1, 1e-1}, maxlevel, minlevel, 2);
 }
 #endif
 
