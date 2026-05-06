@@ -24,7 +24,7 @@ extern vector lambda1v, lambda2v;
 extern double TG0;
 extern scalar TInt, TS, TG;
  
-#if qsource
+#if QSOURCE
 typedef struct {
   coord c;
   double emissivity;
@@ -94,7 +94,7 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
 
   double lambda1vh = n.x / (n.x + n.y) * lambda1v.x[] + n.y / (n.x + n.y) * lambda1v.y[];
   double lambda2vh = n.x / (n.x + n.y) * lambda2v.x[] + n.y / (n.x + n.y) * lambda2v.y[];
-   #if qsource 
+   #if QSOURCE 
     gsl_vector_set(fdata, 0,
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
@@ -133,7 +133,7 @@ void ijc_CoupledTemperature() {
       } else {
         data.emissivity = emissivity(char_fraction, 0.);
       }
-      #if qsource  
+      #if QSOURCE  
       data.q_sorg = q_sorg(t);
       #endif
       fsolve_gsl (EqTemperature, unk, &data, "EqTemperature");
