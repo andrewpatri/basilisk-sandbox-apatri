@@ -3,7 +3,7 @@
 // define section
 #define NO_ADVECTION_DIV 1 // no divergene term in advection
 #define SOLVE_TEMPERATURE 1 // solve also temperature equation ( entalpic balance)
-#define RADIATION_INTERFACE 0.9 // valore dell'emissività
+//#define RADIATION_INTERFACE 0.86 // valore dell'emissività
 #define MOLAR_DIFFUSION 1 // use molar diffusion instead of mass
 #define FICK_CORRECTED 1 // enable fick correction for multicomponent
 #define MASS_DIFFUSION_ENTHALPY 1 // enable enthalpic contribution to mass  flux 
@@ -16,7 +16,7 @@
 # define T_ENV 293
 #endif
 #ifndef a_q
-# define a_q 0.44
+# define a_q 0.28
 #endif
 #ifndef b_q
 # define b_q 1.79
@@ -25,7 +25,7 @@
 double q_sorg (const double t){
    const double a = a_q; 
    const double b = b_q;
-   return a*pow((t + F_ERR), b);  
+   return a*pow((t), b); // if b negative use +0.0000001 to avoid dividing by zero  
  }
 
 
@@ -42,7 +42,7 @@ double q_sorg (const double t){
 #include "superquadric.h"
 // dati base
 double Uin = 0.; //no velocity in exp
-double tend = 800.; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
+double tend = 800; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
 
 // Boundary condition
 u.n[right]    = neumann (0.);
@@ -63,7 +63,7 @@ p[left]      = neumann(0.);
 pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-int maxlevel = 9; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
+int maxlevel = 8; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
 double solid_mass_old;
@@ -71,7 +71,7 @@ double AREA_FACCIA = 0.;
 double solid_mass = 0.;
 int main() {
   
-  lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
+ // lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
   lambdaSmodel = L_HUANG;
   TS0 = 293.; TG0 = T_ENV; // the change this to 300 K
   rhoS = 720;  // kg/m3
@@ -84,12 +84,12 @@ int main() {
   zeta_policy = ZETA_CONST;
 
 
-L0 = H0*15.07; // first try just the block of wood
+L0 = H0*15.055; // first try just the block of wood
   
 
 origin (0, 0);
 
-  DT = 1e-1;
+  DT = 1e-2;
 
   shift_prod = true;
   kinfolder = "biomass/Solid-gas-2507";
@@ -159,22 +159,23 @@ event init(i=0) {
     AREA_FACCIA = 4.*H0*H0*M_PI;
 }
 
-event movie(t += 2){
+/* event movie( t +=2){
 clear();
 cells();
-view(theta=0, phi=0, psi=-pi/2., width = 1080, height = 1080);
-squares("T", spread=-1,linear = true, min =TS0, max =1250 );
+view(theta=0, phi=0, psi=0, width = 1080, height = 1080);
+squares("T", spread=-1,linear = true, min =TS0, max =1250, cbar = true, border = true, pos = {-H0,0}, format = "%9.5f", levels = 20 );
+labels("T");
 draw_vof("f");
 
-save("T.mp4");
-} 
+save("Ta-8.mp4");
+} */
 
 
 event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
   char name[80];
-  sprintf(name, "OutputData-9");
+  sprintf(name, "OutputData-HF1-8");
   static FILE * fp = fopen (name, "w");
  
   if ( t == 1 ) {
@@ -238,7 +239,7 @@ event adapt (i++) {
   scalar inert = YGList_G[OpenSMOKE_IndexOfSpecies ("N2")];
   scalar oxi = YGList_G[OpenSMOKE_IndexOfSpecies ("O2")];
   adapt_wavelet_leave_interface ({T, u.x, u.y, inert, oxi}, {f},
-    (double[]){1.e1, 1.e-1, 1.e-1, 1e-1, 1e-1}, maxlevel, minlevel, 2);
+    (double[]){1.e-1, 1.e-1, 1.e-1, 1e-1, 1e-1}, maxlevel, minlevel, 2);
 }
 #endif
 
