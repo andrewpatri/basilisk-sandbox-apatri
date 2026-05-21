@@ -21,11 +21,22 @@
 #ifndef b_q
 # define b_q 1.79
 #endif 
+#ifndef texp
+# define texp 688
+#endif
 // function definition if they are specific
 double q_sorg (const double t){
+  if (t < texp) {
    const double a = a_q; 
    const double b = b_q;
-   return a*pow((t), b); // if b negative use +0.0000001 to avoid dividing by zero  
+   return a*pow((t), b);
+  }
+   else {
+   const double a = a_q; 
+   const double b = b_q;
+   return a*pow((texp), b);
+  }
+ // if b negative use +0.0000001 to avoid dividing by zero  
  }
 
 
@@ -63,7 +74,7 @@ p[left]      = neumann(0.);
 pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-int maxlevel = 8; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
+int maxlevel = 9; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
 double solid_mass_old;
@@ -92,7 +103,8 @@ origin (0, 0);
   DT = 1e-2;
 
   shift_prod = true;
-  kinfolder = "biomass/Solid-gas-2507";
+  // kinfolder = "biomass/dummy-solid";
+  kinfolder = "biomass/Solid-only-2507";
   init_grid(1 << maxlevel);
 
   run();
@@ -106,20 +118,21 @@ event init(i=0) {
   fraction (f, superquadric(x, y, 20, H0, 2*H0));
 
   // dummy-solid-gas no info of h20 in air
-  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.787545;
-  gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.212031;
-  gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.000424;
+  // gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1;
+  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.756;
+  gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.244;
+  gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.00;
   
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.2134;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.1746;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0201;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.0177;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0157;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.4404;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.1181;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("TANN")]  = 0.;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.4205;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2461;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0014;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.1926;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0485;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0;
+  
 
 
   foreach()
@@ -133,20 +146,22 @@ event init(i=0) {
   for (int jj=0; jj<NGS; jj++) {
     scalar YG = YGList_G[jj];
     if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
-      YG[right] = dirichlet (0.787545);
-      YG[top] = dirichlet(0.787545);     
+      YG[right] = dirichlet (0.756);
+      YG[top] = dirichlet(0.756);     
      } else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
-      YG[right] = dirichlet (0.212031);
-      YG[top] = dirichlet(0.212031); 
+      YG[right] = dirichlet (0.244);
+      YG[top] = dirichlet(0.244); 
      } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
-      YG[right] = dirichlet (0.000424);
-      YG[top] = dirichlet(0.000424); 
+      YG[right] = dirichlet (0.);
+      YG[top] = dirichlet(0.); 
      } else {
       YG[right] = dirichlet (0.);
       YG[top] = dirichlet(0.);
     }
   }
 
+
+  
   foreach()
     u.x[] = f[] > F_ERR ? 0. : Uin;
 // Temperature
@@ -175,7 +190,7 @@ event output (t += 1) {
   fprintf (stderr, "%g\n", t);
 
   char name[80];
-  sprintf(name, "OutputData-HF1-8");
+  sprintf(name, "OutputData");
   static FILE * fp = fopen (name, "w");
  
   if ( t == 1 ) {
@@ -199,9 +214,15 @@ event output (t += 1) {
 double T_surf = 0.;
 foreach(reduction(+:T_surf)){
  if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta){
+  coord m = mycs(point,f);
+  double alpha_Tsurf = plane_alpha(f[],m);
+  coord p; 
+  plane_area_center(m, alpha_vof, &p); // &p puntatore e ok, nella funzione devo indicare coord *p per dirgli che riceverà coord e dovrà prendersela e dovrà modificarlo mentre m viene solo preso
   
+  //double x_per_interp = x + p.x * Delta;
+  //double y_per_interp = y + p.y * Delta; non servono sono già dentro la cella
      
-  T_surf = TS[]/f[];
+  T_surf = interp (T, p.x, p.y); // interp (TS[]/f[], p.x, p.y);
  }
 }
 fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
