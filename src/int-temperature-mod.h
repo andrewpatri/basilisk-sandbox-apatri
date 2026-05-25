@@ -23,7 +23,7 @@ extern face vector fsS, fsG;
 extern vector lambda1v, lambda2v;
 extern double TG0;
 extern scalar TInt, TS, TG;
- 
+extern double H0; // if rettangolo 
 #if QSOURCE
 typedef struct {
   coord c;
@@ -94,17 +94,24 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
 
   double lambda1vh = n.x / (n.x + n.y) * lambda1v.x[] + n.y / (n.x + n.y) * lambda1v.y[];
   double lambda2vh = n.x / (n.x + n.y) * lambda2v.x[] + n.y / (n.x + n.y) * lambda2v.y[];
-   #if QSOURCE 
+   #if QSOURCE
+ if (data->c.y < H0*2) {
     gsl_vector_set(fdata, 0,
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
                  + lambda2vh * gradTGn
                  - data->q_sorg *data->emissivity );
-   #else
+  } else {
    gsl_vector_set(fdata, 0,
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
                  + lambda2vh * gradTGn);
+   }
+   #else 
+   gsl_vector_set(fdata, 0,
+                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivit
+                  + lambda1vh * gradTSn
+                  + lambda2vh * gradTGn);
    #endif                            
   // }
   return GSL_SUCCESS;
@@ -118,28 +125,28 @@ void ijc_CoupledTemperature() {
     YASH = YSList[ash_index];
   }
   foreach() {
-    if (f[]>F_ERR && f[] < 1.-F_ERR) {
-      gsl_vector *unk = gsl_vector_alloc(1);
-      gsl_vector_set(unk, 0, TInt[]);
+    if (f[]>F_ERR && f[] < 1.-F_ERR){
+        gsl_vector *unk = gsl_vector_alloc(1);
+        gsl_vector_set(unk, 0, TInt[]);
 
-      UserDataNls data;
-      coord o = {x,y,z};
-      foreach_dimension()
-        data.c.x = o.x;
+        UserDataNls data;
+        coord o = {x,y,z};
+        foreach_dimension()
+            data.c.x = o.x;
 
-      double char_fraction = calculate_char_fraction(point, YSList, f);
-      if (ash_index >= 0) {
-        data.emissivity = emissivity(char_fraction, YASH[]/f[]);
-      } else {
-        data.emissivity = emissivity(char_fraction, 0.);
-      }
-      #if QSOURCE  
-      data.q_sorg = q_sorg(t);
-      #endif
-      fsolve_gsl (EqTemperature, unk, &data, "EqTemperature");
+        double char_fraction = calculate_char_fraction(point, YSList, f);
+        if (ash_index >= 0) {
+            data.emissivity = emissivity(char_fraction, YASH[]/f[]);
+        } else {
+            data.emissivity = emissivity(char_fraction, 0.);
+        } 
+       #if QSOURCE
+        data.q_sorg = q_sorg(t);
+       #endif
+        fsolve_gsl (EqTemperature, unk, &data, "EqTemperature");
 
-      TInt[] = gsl_vector_get(unk, 0);
-      gsl_vector_free(unk);
-    }
-  }
+        TInt[] = gsl_vector_get(unk, 0);
+        gsl_vector_free(unk);
+        }
+   }   
 }

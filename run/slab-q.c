@@ -74,7 +74,7 @@ p[left]      = neumann(0.);
 pf[left]     = neumann (0.);
 psi[left]    = dirichlet (0.);
 
-int maxlevel = 8; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
+int maxlevel = 9; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
 double H0 = 2e-2; // initially
 double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
 double solid_mass_old;
@@ -95,7 +95,7 @@ int main() {
   zeta_policy = ZETA_CONST;
 
 
-L0 = H0*15.027; // first try just the block of wood
+L0 = H0*15.055; // first try just the block of wood
   
 
 origin (0, 0);
@@ -103,8 +103,8 @@ origin (0, 0);
   DT = 1e-2;
 
   shift_prod = true;
-  kinfolder = "biomass/dummy-solid";
- //  kinfolder = "biomass/Solid-only-2507";
+ // kinfolder = "biomass/dummy-solid";
+ kinfolder = "biomass/Solid-only-2507";
   init_grid(1 << maxlevel);
 
   run();
@@ -118,21 +118,21 @@ event init(i=0) {
   fraction (f, superquadric(x, y, 20, H0, 2*H0));
 
   // dummy-solid-gas no info of h20 in air
-  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1;
- // gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.756;
-  //gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.244;
-  //gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.00;
+ // gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1;
+  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.756;
+  gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.244;
+  gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.00;
   
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
-  /*sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.4205;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.4205;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2461;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0014;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.1926;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0485;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
   sol_start[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 0.0;
-  */
+  
 
 
   foreach()
@@ -146,9 +146,9 @@ event init(i=0) {
   for (int jj=0; jj<NGS; jj++) {
     scalar YG = YGList_G[jj];
     if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
-     YG[right] = dirichlet (1.); //YG[right] = dirichlet (0.756);
-     YG[top] = dirichlet (1.);// YG[top] = dirichlet(0.756);     
-     } /*else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
+    /* YG[right] = dirichlet (1.);*/ YG[right] = dirichlet (0.756);
+    /* YG[top] = dirichlet (1.);// */ YG[top] = dirichlet(0.756);     
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
       YG[right] = dirichlet (0.244);
       YG[top] = dirichlet(0.244); 
      } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
@@ -157,7 +157,7 @@ event init(i=0) {
      } else {
       YG[right] = dirichlet (0.);
       YG[top] = dirichlet(0.);
-    }*/
+    }
   }
 
 
@@ -174,17 +174,29 @@ event init(i=0) {
     AREA_FACCIA = 4.*H0*H0*M_PI;
 }
 
-/* event movie( t +=2){
+event movie( t +=2){
+
+
+  scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
+    scalar XMOIST[];
+      foreach()
+          XMOIST[] = MOIST_S[]*f[];
+
+
 clear();
 cells();
 view(theta=0, phi=0, psi=0, width = 1080, height = 1080);
-squares("T", spread=-1,linear = true, min =TS0, max =1250, cbar = true, border = true, pos = {-H0,0}, format = "%9.5f", levels = 20 );
+squares("T", spread=-1,linear = true, min =TS0, max =1250);// cbar = true, border = true, pos = {-H0,0}, format = "%9.5f", levels = 20 );
 labels("T");
 draw_vof("f");
+mirror ({0, 1}) {
+    squares ("XMOIST", min = 0, max = 1., spread = -1, linear = true);
+        isoline ("zmix - zsto", lw = 1.5, lc = {1., 1., 1.});
+            draw_vof ("f", lw = 1.5);
+              }
 
-save("Ta-8.mp4");
-} */
-
+save("TeMOIST-8.mp4");
+} 
 
 event output (t += 1) {
   fprintf (stderr, "%g\n", t);
@@ -257,9 +269,67 @@ fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
 double q;  
  q = q_sorg(t);
 fprintf (stderr, "DEBUG q= %g\n", q);
+// MOIST
+scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
+scalar XMOIST[];
+ foreach()
+    XMOIST[] = MOIST_S[]*f[];
 
-  fprintf (fp, "%g %g %g %g %g %g %g %g \n", 
-            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, q); 
+double MOIST_surf = 0.;
+MOIST_surf = interpolate (XMOIST,x_sum/L,y_sum/L);
+
+double MOIST_3mm = 0.;
+  MOIST_3mm = interpolate (XMOIST,H0-(3e-3),0);
+double MOIST_6mm = 0.;
+   MOIST_6mm = interpolate (XMOIST,H0-(6e-3),0);
+double MOIST_10mm = 0.;
+    MOIST_10mm = interpolate (XMOIST, H0-(10e-3),0);
+double MOIST_15mm = 0.;
+    MOIST_15mm = interpolate (XMOIST, H0-(15e-3),0);
+
+// HEMI
+scalar HEMI_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("XYHW")];
+scalar XXYHW[];
+foreach()
+XXYHW[] = HEMI_S[]*f[];
+
+double HEMI_surf = 0.;
+HEMI_surf = interpolate (XXYHW,x_sum/L,y_sum/L);
+double HEMI_3mm = 0.;
+HEMI_3mm = interpolate (XXYHW,H0-(3e-3),0);
+double HEMI_6mm = 0.;
+HEMI_6mm = interpolate (XXYHW,H0-(6e-3),0);
+double HEMI_10mm = 0.;
+HEMI_10mm = interpolate (XXYHW, H0-(10e-3),0);
+double HEMI_15mm = 0.;
+HEMI_15mm = interpolate (XXYHW, H0-(15e-3),0);
+
+// HEMI
+scalar CELL_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("CELL")];
+scalar XCELL[];
+foreach()
+XCELL[] = CELL_S[]*f[];
+
+double CELL_surf = 0.;
+CELL_surf = interpolate (XCELL,x_sum/L,y_sum/L);
+double CELL_3mm = 0.;
+CELL_3mm = interpolate (XCELL,H0-(3e-3),0);
+double CELL_6mm = 0.;
+CELL_6mm = interpolate (XCELL,H0-(6e-3),0);
+double CELL_10mm = 0.;
+CELL_10mm = interpolate (XCELL, H0-(10e-3),0);
+double CELL_15mm = 0.;
+CELL_15mm = interpolate (XCELL, H0-(15e-3),0);
+
+
+
+
+
+
+
+
+  fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, Tsurf_avg, T_surf, rate, q, MOIST_surf, MOIST_3mm, MOIST_6mm, MOIST_10mm, MOIST_15mm, HEMI_surf, HEMI_3mm, HEMI_6mm, HEMI_10mm, HEMI_15mm, CELL_surf, CELL_3mm, CELL_6mm, CELL_10mm, CELL_15mm); 
             // radius/(D0/2.)  r/r0);
 
   fflush(fp);
