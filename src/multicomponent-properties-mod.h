@@ -233,9 +233,9 @@ void update_divergence (void) {
     foreach_dimension()
       DTDtG[] += (lambdagradTG.x[1] - lambdagradTG.x[])/Delta;
     DTDtG[] += sGT[];
-    foreach()
-     DTDtG[] += q_source[]*RADIATION_INTERFACE;
-    DTDtG[] += q_source[]*RADIATION_INTERFACE;
+    foreach_dimension()
+     DTDtG[] +=  q_source[]*RADIATION_INTERFACE;
+    DTDtG[] +=  q_source[]*RADIATION_INTERFACE;
   }
 
   // EXTERNAL GAS PHASE
