@@ -14,7 +14,7 @@
 #include "memoryallocation-varprop.h"
 #include "int-temperature-mod.h"
 #include "int-concentration.h"
-#include "multicomponent-properties.h"
+#include "multicomponent-properties-mod.h"
 #include "chemistry.h"
 
 event reset_sources (i++) {
