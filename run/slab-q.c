@@ -179,8 +179,13 @@ event movie( t +=2){
 
   scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
     scalar XMOIST[];
-      foreach()
+      foreach(){
+        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        XMOIST[] = MOIST_S[]/f[];  
+        } else {
           XMOIST[] = MOIST_S[]*f[];
+        }
+      }
 
 
 clear();
@@ -272,8 +277,13 @@ fprintf (stderr, "DEBUG q= %g\n", q);
 // MOIST
 scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
 scalar XMOIST[];
- foreach()
-    XMOIST[] = MOIST_S[]/f[];
+ foreach(){
+        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        XMOIST[] = MOIST_S[]/f[];  
+        } else {
+          XMOIST[] = MOIST_S[]*f[];
+        }
+      }
 
 double MOIST_surf = 0.;
 MOIST_surf = interpolate (XMOIST,x_sum/L,y_sum/L);
@@ -290,8 +300,13 @@ double MOIST_15mm = 0.;
 // HEMI
 scalar HEMI_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("XYHW")];
 scalar XXYHW[];
-foreach()
-XXYHW[] = HEMI_S[]/f[];
+foreach(){
+        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        XXYHW[] = HEMI_S[]/f[];  
+        } else {
+          XXYHW[] = HEMI_S[]*f[];
+        }
+      }
 
 double HEMI_surf = 0.;
 HEMI_surf = interpolate (XXYHW,x_sum/L,y_sum/L);
@@ -307,8 +322,13 @@ HEMI_15mm = interpolate (XXYHW, H0-(15e-3),0);
 // HEMI
 scalar CELL_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("CELL")];
 scalar XCELL[];
-foreach()
-XCELL[] = CELL_S[]/f[];
+foreach(){
+        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        XCELL[] = CELL_S[]/f[];  
+        } else {
+          XCELL[] = CELL_S[]*f[];
+        }
+      }
 
 double CELL_surf = 0.;
 CELL_surf = interpolate (XCELL,x_sum/L,y_sum/L);
