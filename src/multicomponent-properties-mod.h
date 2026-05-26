@@ -7,14 +7,14 @@ which is used as a sorce term for the velocity divergence, to
 describe low Mach compressibility effects. */
 
 #ifdef VARPROP
-#include "solid-thermal-conductivity.h"
+#include "solid-thermal-conductivity-mod.h"
 
 scalar rhoGv_G0[], rhoGv_S0[];
 extern scalar porosity;
 scalar DTDtS[], DTDtG[];
 scalar * DYDtG_G = NULL;
 scalar * DYDtG_S = NULL;
-scalar q_source[];
+
 trace
 void update_properties (void) {
 
@@ -233,9 +233,6 @@ void update_divergence (void) {
     foreach_dimension()
       DTDtG[] += (lambdagradTG.x[1] - lambdagradTG.x[])/Delta;
     DTDtG[] += sGT[];
-    foreach_dimension()
-     DTDtG[] +=  q_source[]*RADIATION_INTERFACE;
-    DTDtG[] +=  q_source[]*RADIATION_INTERFACE;
   }
 
   // EXTERNAL GAS PHASE
