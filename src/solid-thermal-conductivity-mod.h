@@ -58,6 +58,49 @@ coord lambda_huang (Point point, double lambdaG, double porosity, double Tempera
                     + 13.5*5.67e-8*pow(Temperature, 3)*80e-06/emissivity (char_fraction, ash_fraction)
                     + porosity*lambdaG;
     return (coord){lambda, lambda};
+    
+    
+}
+// Huang2 model for solid thermal conductivity
+coord lambda_huang2 (Point point, double lambdaG, double porosity, double Temperature, scalar f) {
+    double char_cond = 0.071;
+    double bio_cond = 0.21;
+    double char_fraction = calculate_char_fraction(point, YSList, f);
+
+    int ash_index = OpenSMOKE_IndexOfSolidSpeciesWithoutError("ASH");
+    scalar YASH;
+    if (ash_index >= 0)
+        YASH = YSList[ash_index];
+
+    double ash_fraction = (ash_index >= 0) ? YASH[]/f[] : 0.;
+    double lambda = 2*((char_cond*char_fraction + 
+                     bio_cond*(1. - char_fraction))*(1. - porosity) 
+                    + 13.5*5.67e-8*pow(Temperature, 3)*80e-06/emissivity (char_fraction, ash_fraction)
+                    + porosity*lambdaG);
+    return (coord){lambda, lambda};
+    
+    
+}
+
+// Huang05 model for solid thermal conductivity
+coord lambda_huang05 (Point point, double lambdaG, double porosity, double Temperature, scalar f) {
+    double char_cond = 0.071;
+    double bio_cond = 0.21;
+    double char_fraction = calculate_char_fraction(point, YSList, f);
+
+    int ash_index = OpenSMOKE_IndexOfSolidSpeciesWithoutError("ASH");
+    scalar YASH;
+    if (ash_index >= 0)
+        YASH = YSList[ash_index];
+
+    double ash_fraction = (ash_index >= 0) ? YASH[]/f[] : 0.;
+    double lambda = 0.5*((char_cond*char_fraction + 
+                     bio_cond*(1. - char_fraction))*(1. - porosity) 
+                    + 13.5*5.67e-8*pow(Temperature, 3)*80e-06/emissivity (char_fraction, ash_fraction)
+                    + porosity*lambdaG);
+    return (coord){lambda, lambda};
+    
+    
 }
 
 // Ancacouce model for solid thermal conductivity
@@ -169,10 +212,10 @@ event defaults (i = 0) {
       pseudo_phase_thermal_conductivity = lambda_huang;
       break;
     case L_HUANG2:
-      pseudo_phase_thermal_conductivity = 2.*lambda_huang;
+      pseudo_phase_thermal_conductivity = lambda_huang2;
       break;
     case L_HUANG05:
-      pseudo_phase_thermal_conductivity = 0.5*lambda_huang;
+      pseudo_phase_thermal_conductivity = lambda_huang05;
       break;
     case L_ANCACOUCE:
       pseudo_phase_thermal_conductivity = lambda_ancacouce;
