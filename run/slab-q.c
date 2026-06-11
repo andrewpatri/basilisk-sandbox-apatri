@@ -54,7 +54,7 @@ double q_sorg (const double t){
 // dati base
 double Uin = 0.; //no velocity in exp
 double tend = 800; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
-scalar f_old;
+
 // Boundary condition
 u.n[right]    = neumann (0.);
 u.t[right]    = neumann (0.);
@@ -85,8 +85,8 @@ int main() {
  // lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
   lambdaSmodel = L_HUANG;
   TS0 = 293.; TG0 = T_ENV; // the change this to 300 K
-  rhoS = 1180;  // kg/m3
-  eps0 = 0.39;
+  rhoS = 1500 ;  // kg/m3
+  eps0 = 0.52;
   emissivity = emissivity_lu;
   //dummy properties
   rho1 = 1., rho2 = 1.;
@@ -104,7 +104,7 @@ origin (0, 0);
 
   shift_prod = true;
  // kinfolder = "biomass/dummy-solid";
- kinfolder = "biomass/Solid-only-2507";
+ kinfolder = "biomass/Solid-only-noinv";
   init_grid(1 << maxlevel);
 
   run();
@@ -170,8 +170,7 @@ event init(i=0) {
     TG[left] = neumann (0.);
     TG[top] =  neumann(0.);
   //  TG[bottom] = neumann(0.);
-  foreach()
-    f_old[] = f[];
+  
       
     AREA_FACCIA = 4.*H0*H0*M_PI;
 }
@@ -182,11 +181,9 @@ event movie( t +=2){
   scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
     scalar XMOIST[];
       foreach(){
-        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        if (f[] > F_ERR){
         XMOIST[] = MOIST_S[]/f[];  
-        } else {
-          XMOIST[] = MOIST_S[];
-        }
+        } 
       }
 
 
@@ -204,16 +201,7 @@ mirror ({0, 1}) {
 
 save("TeMOIST-8.mp4");
 } 
-event chemistry (i++) {
-foreach()
-f_old[] = f[];
 
-}
-
-event debug_fold (t = 1) {
-  foreach()
-      fprintf(stdout, "x=%g f=%g f_old=%g\n", x, f[], f_old[]);
-      }
 
 event output (t += 1) {
   fprintf (stderr, "%g\n", t);
@@ -291,7 +279,6 @@ fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
    	}
      }
     Tsurf_avg /= count;
-fprintf (stderr, "DEBUG Tsurf= %g\n", Tsurf_avg);
 
 
   double T6mm  = interpolate (T, H0-(6e-3), 0.);
@@ -306,24 +293,10 @@ fprintf (stderr, "DEBUG q= %g\n", q);
 scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
 scalar XMOIST[];
  foreach(){
-        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        if (f[] > F_ERR){
         XMOIST[] = MOIST_S[]/f[];  
-        } else {
-          XMOIST[] = MOIST_S[];
         }
       }
-
-//average temperature of the surface
-  double MOIST_surf_test = 0.; 
-  foreach(reduction(+:MOIST_surf_test)) {
-  	 if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta){ // && x > H0 + Delta && x < H0 - Delta ) {
-   	MOIST_surf_test = XMOIST[];
-   	}
-     }
-  
-fprintf (stderr, "DEBUG MOIST", MOIST_surf_test);
-
-
 
 double MOIST_surf = 0.;
 MOIST_surf = interpolate (XMOIST,x_sum/L,y_sum/L);
@@ -333,29 +306,16 @@ double MOIST_3mm = 0.;
  fprintf (stderr, "DEBUG mois 3 0= %g\n", MOIST_3mm);
 double MOIST_6mm = 0.;
    MOIST_6mm = interpolate (XMOIST,H0-(6e-3),0);
-double MOIST_surf2 = 0.;
- MOIST_surf2 = interpolate (XMOIST,x_sum2/L2,y_sum2/L2);
- fprintf (stderr, "DEBUG mois surf 2= %g\n", MOIST_surf2);
-double MOIST_3mm2 = 0.;
- MOIST_3mm2 = interpolate (XMOIST,H0-(3e-3),5/3*H0);
-double MOIST_6mm2 = 0.;
- MOIST_6mm2 = interpolate (XMOIST,H0-(6e-3),5/3*H0);
-
-
 
 double MOIST_10mm = 0.;
 MOIST_10mm = interpolate (XMOIST, H0-(10e-3),0);
-// double MOIST_15mm = 0.;
-    //MOIST_15mm = interpolate (XMOIST, H0-(15e-3),0);
 
 // HEMI
 scalar HEMI_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("XYHW")];
 scalar XXYHW[];
 foreach(){
-        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        if (f[] > F_ERR ){
         XXYHW[] = HEMI_S[]/f[];  
-        } else {
-          XXYHW[] = HEMI_S[]*f[];
         }
       }
 
@@ -365,21 +325,13 @@ double HEMI_3mm = 0.;
 HEMI_3mm = interpolate (XXYHW,H0-(3e-3),0);
 double HEMI_6mm = 0.;
 HEMI_6mm = interpolate (XXYHW,H0-(6e-3),0);
-double HEMI_surf2 = 0.;
-HEMI_surf2 = interpolate (XXYHW,x_sum2/L2,y_sum2/L2);
-double HEMI_3mm2 = 0.;
-HEMI_3mm2 = interpolate (XXYHW,H0-(3e-3),5/3*H0);
-double HEMI_6mm2 = 0.;
-HEMI_6mm2 = interpolate (XXYHW,H0-(6e-3),5/3*H0);
 
 // CELL
 scalar CELL_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("CELL")];
 scalar XCELL[];
 foreach(){
-        if (f[] > F_ERR && f[] < 1.-F_ERR){
+        if (f[] > F_ERR ){
         XCELL[] = CELL_S[]/f[];  
-        } else {
-          XCELL[] = CELL_S[]*f[];
         }
       }
 
@@ -389,26 +341,13 @@ double CELL_3mm = 0.;
 CELL_3mm = interpolate (XCELL,H0-(3e-3),0);
 double CELL_6mm = 0.;
 CELL_6mm = interpolate (XCELL,H0-(6e-3),0);
-double CELL_surf2 = 0.;
-CELL_surf2 = interpolate (XCELL,x_sum2/L2,y_sum2/L2);
-double CELL_3mm2 = 0.;
-CELL_3mm2 = interpolate (XCELL,H0-(3e-3),5/3*H0);
-double CELL_6mm2 = 0.;
-CELL_6mm2 = interpolate (XCELL,H0-(6e-3),5/3*H0);
-
-//double CELL_10mm = 0.;
-//CELL_10mm = interpolate (XCELL, H0-(10e-3),0);
-//double CELL_15mm = 0.;
-//CELL_15mm = interpolate (XCELL, H0-(15e-3),0);
 
  // CELL
  scalar LIGH_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("LIGH")];
  scalar XLIGH[];
  foreach(){
-           if (f[] > F_ERR && f[] < 1.-F_ERR){
+           if (f[] > F_ERR ){
            XLIGH[] = LIGH_S[]/f[];
-           } else {
-             XLIGH[] = LIGH_S[]*f[];
            }
           }      
  double LIGH_surf = 0.;
@@ -417,20 +356,12 @@ CELL_6mm2 = interpolate (XCELL,H0-(6e-3),5/3*H0);
   LIGH_3mm = interpolate (XLIGH,H0-(3e-3),0);
  double LIGH_6mm = 0.;
   LIGH_6mm = interpolate (XLIGH,H0-(6e-3),0);
- double LIGH_surf2 = 0.;
-  LIGH_surf2 = interpolate (XLIGH,x_sum2/L2,y_sum2/L2);
- double LIGH_3mm2 = 0.;
-  LIGH_3mm2 = interpolate (XLIGH,H0-(3e-3),5/3*H0);
- double LIGH_6mm2 = 0.;
-  LIGH_6mm2 = interpolate (XLIGH,H0-(6e-3),5/3*H0);
 
   scalar LIGO_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("LIGO")];
   scalar XLIGO[];
    foreach(){
-   if (f[] > F_ERR && f[] < 1.-F_ERR){
+   if (f[] > F_ERR ){
        XLIGO[] = LIGO_S[]/f[];
-           } else {
-            XLIGO[] = LIGO_S[];
            }
          }
    double LIGO_surf = 0.;
@@ -439,21 +370,13 @@ CELL_6mm2 = interpolate (XCELL,H0-(6e-3),5/3*H0);
    LIGO_3mm = interpolate (XLIGO,H0-(3e-3),0);
    double LIGO_6mm = 0.;
    LIGO_6mm = interpolate (XLIGO,H0-(6e-3),0);
-   double LIGO_surf2 = 0.;
-   LIGO_surf2 = interpolate (XLIGO,x_sum2/L2,y_sum2/L2);
-   double LIGO_3mm2 = 0.;
-   LIGO_3mm2 = interpolate (XLIGO,H0-(3e-3),5/3*H0);
-   double LIGO_6mm2 = 0.;
-   LIGO_6mm2 = interpolate (XLIGO,H0-(6e-3),5/3*H0);
 
    scalar LIGC_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("LIGC")];
    scalar XLIGC[];
      foreach(){
-       if (f[] > F_ERR && f[] < 1.-F_ERR){
+       if (f[] > F_ERR ){
          XLIGC[] = LIGC_S[]/f[];
-          } else {
-            XLIGC[] = LIGC_S[];
-             }
+          } 
             }
    double LIGC_surf = 0.;
    LIGC_surf = interpolate (XLIGC,x_sum/L,y_sum/L);
@@ -461,25 +384,16 @@ CELL_6mm2 = interpolate (XCELL,H0-(6e-3),5/3*H0);
    LIGC_3mm = interpolate (XLIGC,H0-(3e-3),0);
    double LIGC_6mm = 0.;
    LIGC_6mm = interpolate (XLIGC,H0-(6e-3),0);
-   double LIGC_surf2 = 0.;
-   LIGC_surf2 = interpolate (XLIGC,x_sum2/L2,y_sum2/L2);
-   double LIGC_3mm2 = 0.;
-   LIGC_3mm2 = interpolate (XLIGC,H0-(3e-3),5/3*H0);
-   double LIGC_6mm2 = 0.;
-   LIGC_6mm2 = interpolate (XLIGC,H0-(6e-3),5/3*H0);
-   fprintf (stderr, "DEBUG 2= %g\n", LIGC_6mm2); 
+
 
   scalar H2O_GS = YGList_S[OpenSMOKE_IndexOfSpecies ("H2O")];
   
-  fprintf (stderr, "DEBUG 4= %g\n", LIGC_6mm2);
 
   scalar YH2O[];
 
   foreach(){
-    if (f[] > F_ERR && f[] < 1.-F_ERR){
+    if (f[] > F_ERR){
     YH2O[] = H2O_GS[]/f[];
-     } else {
-      YH2O[] = H2O_GS[];
      }
      }
 
@@ -491,14 +405,21 @@ CELL_6mm2 = interpolate (XCELL,H0-(6e-3),5/3*H0);
     H2O_6mm = interpolate (YH2O,H0-(6e-3),0);
      fprintf (stderr, "DEBUG 4= %g\n", H2O_6mm);
 
-
+  scalar f_search[];
    double fcalcolato = 0;
-    fcalcolato = interpolate(f,x_sum/L,y_sum/L);
+   foreach(){
+   if (y < Delta)
+   f_search = f[];
+   if (f_search > F_ERR && f_search < 1-F_ERR)
+   fcalcolato = f_search[];
+  }
   
 
-  fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", 
-            t, solid_mass/solid_mass0, T6mm, T3mm, T_surf, q, MOIST_surf, MOIST_3mm, MOIST_6mm, HEMI_surf, HEMI_3mm, HEMI_6mm, CELL_surf, CELL_3mm, CELL_6mm, LIGH_surf, LIGH_3mm, LIGH_6mm, MOIST_surf2, MOIST_3mm2, MOIST_6mm2, HEMI_surf2, HEMI_3mm2, HEMI_6mm2, CELL_surf2, CELL_3mm2, CELL_6mm2, LIGH_surf2, LIGH_3mm2, LIGH_6mm2, LIGC_surf, LIGC_3mm, LIGC_6mm, LIGO_surf, LIGO_3mm, LIGO_6mm,H2O_surf,H2O_3mm,H2O_6mm, MOIST_10mm, fcalcolato, MOIST_surf_test); 
-            // radius/(D0/2.)  r/r0);
+  fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, T_surf, q, MOIST_surf, MOIST_3mm, MOIST_6mm, HEMI_surf,
+             HEMI_3mm, HEMI_6mm, CELL_surf, CELL_3mm, CELL_6mm, LIGH_surf, LIGH_3mm, LIGH_6mm, LIGC_surf, 
+             LIGC_3mm, LIGC_6mm, LIGO_surf, LIGO_3mm, LIGO_6mm, H2O_surf, H2O_3mm, H2O_6mm, MOIST_10mm, fcalcolato); 
+  
   fflush(fp);
 }
 
