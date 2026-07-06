@@ -280,7 +280,7 @@ event defaults (i = 0) {
     case L_KK:
       pseudo_phase_thermal_conductivity = lambda_kk;
       break;
-      case L_KK_mod:
+     case L_KK_mod:
       pseudo_phase_thermal_conductivity = lambda_kk_mod;
       break;
     case L_LU:
