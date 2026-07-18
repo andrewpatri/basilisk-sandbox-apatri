@@ -95,7 +95,7 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
   double lambda1vh = n.x / (n.x + n.y) * lambda1v.x[] + n.y / (n.x + n.y) * lambda1v.y[];
   double lambda2vh = n.x / (n.x + n.y) * lambda2v.x[] + n.y / (n.x + n.y) * lambda2v.y[];
    #if QSOURCE
- if (data->c.y < (H0*2.95)) {
+ if (data->c.y <  Y_descriminante) {
     gsl_vector_set(fdata, 0,
                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
@@ -103,9 +103,7 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
                  - data->q_sorg *data->emissivity );
   } else {
    gsl_vector_set(fdata, 0,
-                 -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
-                 + lambda1vh * gradTSn 
-                 + lambda2vh * gradTGn);
+                 + lambda1vh * gradTSn);
    }
    #else 
    gsl_vector_set(fdata, 0,

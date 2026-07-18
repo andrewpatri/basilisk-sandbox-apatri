@@ -29,6 +29,7 @@ event reset_sources (i++) {
   reset (sSexpList, 0.);
 }
 
+extern double H0;
 extern face vector ufsave;
 face vector u_prime[];
 #ifndef STOP_TRACER_ADVECTION
@@ -357,6 +358,10 @@ event tracer_diffusion (i++) {
 
       double Sheatflux = lambda1vh*Strgrad;
       double Gheatflux = lambda2vh*Gtrgrad;
+  #ifdef Y_discriminante
+      if (y > Y_discriminante)
+        Gheatflux = 0.;      // laterale: parete adiabatica lato gas
+  #endif
 
 # ifdef AXI
       sST[] += Sheatflux*area*(y + p.y*Delta)/(Delta*y)*cm[];

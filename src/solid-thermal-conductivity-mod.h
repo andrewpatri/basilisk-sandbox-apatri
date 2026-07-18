@@ -24,6 +24,29 @@ enum solid_thermal_conductivity_model {
   L_CZIEGLER,
 };
 
+
+#ifdef OPENSMOKE
+const int n_wood_species = 16;
+const char *wood_species[] = {"CELL", "CELLA", "GMSW", "HCE1", 
+                              "HCE2", "XYHW", "XYGR", "LIGH", 
+                              "LIGOH", "LIGO", "LIGC", "LIGCC", 
+                              "LIG", "TGL", "TANN", "ITANN"};
+
+double calculate_wood_fraction(Point point, const scalar * YList, scalar f) {
+  double wood_fraction = 0.;
+  if (f[] > F_ERR) {
+    for (int jj = 0; jj < n_wood_species; jj++) {
+      int index = OpenSMOKE_IndexOfSolidSpeciesWithoutError(wood_species[jj]);
+      if (index >= 0) {
+        scalar YC = YList[index];
+        wood_fraction += YC[]/f[];
+      }
+    }
+  }
+  return wood_fraction;
+}
+
+#endif
 enum solid_thermal_conductivity_model lambdaSmodel = L_CONST;
 
 // We return a coord because some models can be anisotropic
@@ -215,8 +238,8 @@ coord lambda_lu_conv (Point point, double lambdaG, double porosity, double Tempe
 
 coord lambda_cziegler (Point point, double lambdaG, double porosity, double Temperature, scalar f) {
   double moist_fraction= calculate_moisture_fraction(point, YSList, f);
-  double char_fraction = calculate_char_fraction(point, YSList, f);
-  double wood_fraction = 1. - char_fraction - moist_fraction;
+  //double char_fraction = calculate_char_fraction(point, YSList, f);
+  double wood_fraction = calculate_wood_fraction(point, YSList, f);
   
   double parallel_wood = 0.1259*log(Temperature)-0.3559;
   double parallel_charred = -5e-7*sq(Temperature)+0.0015*Temperature+0.1744;
@@ -226,32 +249,25 @@ coord lambda_cziegler (Point point, double lambdaG, double porosity, double Temp
   double perpendicular_charred = -3e-7*sq(Temperature)+0.0009*Temperature+0.0802;
   double perpendicular_moist = 0.160583942;
   
-  double lambda_parallel;
-  double lambda_perpendicular;
+  double eps_k_ar = 136.5;
+  double sigma_ar = 3.33;
+  double doppiav_ar = 39.948;
+  double r_gas = 8.314;
+  double T_star = Temperature/eps_k_ar;
+  double Omega_ar = 1.16145/pow(T_star,0.14874)+0.52487/exp(0.7732*T_star)+2.16178/exp(2.43787*T_star);
+  double eta_ar = 2.6693e-5*pow(doppiav_ar*Temperature,0.5)/(pow(sigma_ar,2)*Omega_ar)*0.1;
+  double lambda_ar = 15/4*(r_gas/(doppiav_ar*0.001))*eta_ar;
+  double charred_par = (parallel_charred - lambda_ar*porosity)/(1-porosity);
+  double charred_per = (perpendicular_charred - lambda_ar*porosity)/(1-porosity);
   
-  if (Temperature < 373.5){
-    lambda_parallel = ( parallel_moist * moist_fraction 
-                        + wood_fraction * parallel_wood)*(1-porosity)
-                        +  porosity*lambdaG;
-    lambda_perpendicular = ( perpendicular_moist * moist_fraction 
-                        + wood_fraction * perpendicular_wood)*(1-porosity)
-                        +  porosity*lambdaG;
-    }else if( Temperature < 473.3) {
-    lambda_parallel = ( parallel_moist * moist_fraction 
-                        + wood_fraction * parallel_wood
-                        + char_fraction * parallel_charred)*(1-porosity)
-                        +  porosity*lambdaG;
-    lambda_perpendicular = ( perpendicular_moist * moist_fraction 
-                        + wood_fraction * perpendicular_wood
-                        + char_fraction * perpendicular_charred)*(1-porosity)
-                        +  porosity*lambdaG;
-    }else{ 
-    lambda_parallel = ( char_fraction * parallel_charred)*(1-porosity)
-                        +  porosity*lambdaG;
-    lambda_perpendicular = ( char_fraction * perpendicular_charred)*(1-porosity)
-                        +  porosity*lambdaG;
-    }
-
+  double lambda_parallel = ( parallel_moist * moist_fraction 
+                        + wood_fraction * parallel_wood) +
+                        + (charred_par*(1-porosity)+porosity*lambdaG)*(1-wood_fraction-moist_fraction);
+                        
+  double lambda_perpendicular = ( perpendicular_moist * moist_fraction 
+                        + wood_fraction * perpendicular_wood) +
+                        + (charred_per*(1-porosity)+porosity*lambdaG)*(1-wood_fraction-moist_fraction);
+                        
   return (coord){lambda_parallel, lambda_perpendicular};
 }
 // Function pointer for the pseudophase thermal conductivity model
