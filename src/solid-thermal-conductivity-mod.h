@@ -8,7 +8,6 @@ porosity and volume fraction fields.
  */
 
 extern scalar* YSList; // List of solid species mass fraction fields
-
 enum solid_thermal_conductivity_model {
   L_CONST,
   L_CORBETTA,
@@ -22,6 +21,7 @@ enum solid_thermal_conductivity_model {
   L_GALGANO,
   L_LU_CONV,
   L_CZIEGLER,
+  L_2SOLIDI,
 };
 
 
@@ -270,6 +270,24 @@ coord lambda_cziegler (Point point, double lambdaG, double porosity, double Temp
                         
   return (coord){lambda_parallel, lambda_perpendicular};
 }
+// KK model for solid thermal conductivity
+coord lambda_2solidi (Point point, double lambdaG, double porosity, double Temperature, scalar f) {
+    NOT_UNUSED(Temperature);
+    if (y < Y_inert){
+    double lS_per = 0.430;
+    double lS_par = 0.766;
+    double leff_per = 1./((1. - porosity)/lS_per + porosity/lambdaG);
+    double leff_par = (1. - porosity)*lS_par + porosity*lambdaG;
+    // longitudinal direction theta = 1.0
+    double lambda_par = leff_par;
+    // transversal direction theta = 0.58
+    double lambda_per = 0.58*leff_par + (1. - 0.58)*leff_per;
+    // This model is anisotropic, we return the longitudinal conductivity as the effective one for simplicity
+    return (coord){lambda_par, lambda_per};
+    } else {double lambda = 0.04;
+  return (coord){lambda, lambda};
+}
+}
 // Function pointer for the pseudophase thermal conductivity model
 coord (*pseudo_phase_thermal_conductivity) (Point point, double lambdaG, double porosity, double Temperature, scalar f) = lambda_const;
 
@@ -296,7 +314,7 @@ event defaults (i = 0) {
     case L_KK:
       pseudo_phase_thermal_conductivity = lambda_kk;
       break;
-     case L_KK_mod:
+    case L_KK_mod:
       pseudo_phase_thermal_conductivity = lambda_kk_mod;
       break;
     case L_LU:
@@ -308,9 +326,12 @@ event defaults (i = 0) {
     case L_LU_CONV:
       pseudo_phase_thermal_conductivity = lambda_lu_conv;
       break;
-      case L_CZIEGLER:
+    case L_CZIEGLER:
       pseudo_phase_thermal_conductivity = lambda_cziegler;
       break;
+    case L_2SOLIDI:
+      pseudo_phase_thermal_conductivity = lambda_2solidi;
+     break;
     default:
       fprintf(stderr, "ERROR: Unknown solid thermal conductivity model, unkown lambdaSmodel = %d \n", lambdaSmodel);
       abort();
