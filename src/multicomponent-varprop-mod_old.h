@@ -12,9 +12,9 @@
 
 #include "common-phasechange.h"
 #include "memoryallocation-varprop.h"
-#include "int-temperature.h"
+#include "int-temperature-mod.h"
 #include "int-concentration.h"
-#include "multicomponent-properties.h"
+#include "multicomponent-properties-mod.h"
 #include "chemistry.h"
 
 event reset_sources (i++) {
@@ -29,6 +29,104 @@ event reset_sources (i++) {
   reset (sSexpList, 0.);
 }
 
+extern double H0;
+extern face vector ufsave;
+face vector u_prime[];
+#ifndef STOP_TRACER_ADVECTION
+event tracer_advection (i++) {
+
+foreach() {
+    f[] = clamp (f[], 0., 1.);
+    f[] = (f[] > F_ERR) ? f[] : 0.;
+    f[] = (f[] < 1.-F_ERR) ? f[] : 1.;
+    fS[] = f[]; fG[] = 1. - f[];
+  }
+
+  //Compute face gradients
+  face_fraction (fS, fsS);
+  face_fraction (fG, fsG);
+
+  check_and_correct_fractions (YGList_S, NGS, false);
+  check_and_correct_fractions (YGList_G, NGS, true);
+  check_and_correct_fractions (YSList,   NSS, false);
+
+#ifdef VARPROP
+  update_properties();
+#else
+  update_properties_constant();
+#endif
+
+  // lose tracer form and extrapolate fields
+  foreach() {
+    porosity[] = (f[] > F_ERR) ? porosity[]/f[] : 0.;
+#ifdef SOLVE_TEMPERATURE
+    TS[] = (f[] > F_ERR) ? TS[]/f[] : 0.;
+    TG[] = ((1.-f[]) > F_ERR) ? TG[]/(1.-f[]) : 0.;
+
+    TS[] = (f[] > F_ERR) ? TS[] : TG[];
+    TG[] = (f[] < 1.-F_ERR) ? TG[] : TS[];
+#endif
+
+    for (int jj=0; jj<NGS; jj++) { 
+      scalar YG_S = YGList_S[jj];
+      scalar YG_G = YGList_G[jj];
+
+      YG_S[] = (f[] > F_ERR) ? YG_S[]/f[] : 0.;
+      YG_G[] = (f[] < 1.-F_ERR) ? YG_G[]/(1.-f[]) : 0.;
+
+      YG_S[] = (f[] > F_ERR) ? YG_S[] : YG_G[];
+      YG_G[] = (f[] < 1.-F_ERR) ? YG_G[] : YG_S[];
+    }
+  }
+
+  advection_div(YGList_S, ufsave, dt);
+  advection_div(YGList_G, ufsave, dt);
+
+#ifdef SOLVE_TEMPERATURE
+  foreach_face() {
+    double ef = clamp(face_value(porosity, 0), 0., 1.);
+
+    double rhoGvh_S, rhoSvh;
+    double cpGvh_S, cpSvh;
+
+    #ifdef VARPROP
+    rhoGvh_S = face_value(rhoGv_S, 0); rhoSvh = face_value(rhoSv, 0);
+    cpGvh_S = face_value(cpGv_S, 0); cpSvh = face_value(cpSv, 0);
+    #else
+    rhoGvh_S = rhoG; rhoSvh = rhoS;
+    cpGvh_S = cpG; cpSvh = cpS;
+    #endif
+
+    u_prime.x[] = (fsS.x[] > F_ERR) ? 
+                  fsS.x[]*ufsave.x[]*(rhoGvh_S*cpGvh_S)/
+                  (rhoGvh_S*cpGvh_S*ef + rhoSvh*cpSvh*(1. - ef))
+                  : 0.;
+  }
+
+  advection_div({TS}, u_prime, dt);
+# ifndef TEMPERATURE_PROFILE
+  advection_div({TG}, ufsave, dt);
+# endif
+#endif
+
+  // recover tracer form
+  foreach() {
+    porosity[] = (f[] > F_ERR) ? porosity[]*f[] : 0.;
+#ifdef SOLVE_TEMPERATURE
+    TS[] = (f[] > F_ERR) ? TS[]*f[] : 0.;
+    TG[] = ((1.-f[]) > F_ERR) ? TG[]*(1.-f[]) : 0.;
+#endif
+
+    for (int jj=0; jj<NGS; jj++) { 
+      scalar YG_S = YGList_S[jj];
+      scalar YG_G = YGList_G[jj];
+
+      YG_S[] = (f[] > F_ERR) ? YG_S[]*f[] : 0.;
+      YG_G[] = (f[] < 1.-F_ERR) ? YG_G[]*(1. - f[]) : 0.;
+    }
+  }
+}
+#endif
 
 void update_mole_fields() {
   #ifdef MOLAR_DIFFUSION
@@ -40,7 +138,7 @@ void update_mole_fields() {
         scalar YG = YGList_S[jj];
         yG[jj] = YG[];
       }
-      mole_from_mass (xG, &MWmix, yG, NGS);
+      OpenSMOKE_MoleFractions_From_MassFractions (xG, &MWmix, yG);
       // MWmixG_S[] = MWmix; // Already done in update_properties()
       for (int jj = 0; jj < NGS; jj++) {
         scalar XG = XGList_S[jj];
@@ -53,7 +151,7 @@ void update_mole_fields() {
         scalar YG = YGList_G[jj];
         yG[jj] = YG[];
       }
-      mole_from_mass (xG, &MWmix, yG, NGS);
+      OpenSMOKE_MoleFractions_From_MassFractions (xG, &MWmix, yG);
       // MWmixG_G[] = MWmix; // Already done in update_properties()
       for (int jj = 0; jj < NGS; jj++) {
         scalar XG = XGList_G[jj];
@@ -99,7 +197,7 @@ event tracer_diffusion (i++) {
   //interface temperature first guess
   foreach() {
     TInt[] = 0.;
-    if (f[] > F_ERR && f[] < 1. - F_ERR)
+    if (f[] > F_ERR && f[] < 1.-F_ERR)
       TInt[] = (TS[] + TG[])/2;
   }
 
@@ -148,7 +246,7 @@ event tracer_diffusion (i++) {
         scalar YGInt = YGList_Int[jj];
         yG[jj] = YGInt[];
       }
-      mole_from_mass (xG, &MWmixInt, yG, NGS);
+      OpenSMOKE_MoleFractions_From_MassFractions (xG, &MWmixInt, yG);
       for (int jj=0; jj<NGS; jj++) {
         scalar XGInt = XGList_Int[jj];
         XGInt[] = xG[jj];
@@ -158,7 +256,7 @@ event tracer_diffusion (i++) {
 
   //Calculate the source therm
   foreach() {
-    if (f[] > F_ERR && f[] < 1. - F_ERR) {
+    if (f[] > F_ERR && f[] < 1.-F_ERR) {
       coord n = facet_normal (point, fS, fsS), p;
       double alpha = plane_alpha (fS[], n);
       double area = plane_area_center (n, alpha, &p);
@@ -180,8 +278,7 @@ event tracer_diffusion (i++) {
         scalar XG = XGList_S[jj];
         scalar XGInt = XGList_Int[jj];
         double Strgrad = ebmgrad (point, XG, fS, fG, fsS, fsG, false, XGInt[], &success);
-        jS[jj] = (MWmixG_S[] > 0.) ?
-          rhoGvh_S*DmixG[]*Strgrad*gas_MWs[jj]/MWmixG_S[] : 0.; // MW==0 in unfilled cells -> 0/0
+        jS[jj] = rhoGvh_S*DmixG[]*Strgrad*gas_MWs[jj]/MWmixG_S[];
         #else
         scalar YG    = YGList_S[jj];
         scalar YGInt = YGList_Int[jj];
@@ -223,8 +320,7 @@ event tracer_diffusion (i++) {
         scalar XG = XGList_G[jj];
         scalar XGInt = XGList_Int[jj];
         double Gtrgrad = ebmgrad (point, XG, fS, fG, fsS, fsG, true, XGInt[], &success);
-        jG[jj] = (MWmixG_G[] > 0.) ?
-          rhoGvh_G*DmixG[]*Gtrgrad*gas_MWs[jj]/MWmixG_G[] : 0.; // MW==0 in unfilled cells -> 0/0
+        jG[jj] = rhoGvh_G*DmixG[]*Gtrgrad*gas_MWs[jj]/MWmixG_G[];
 #else
         scalar YG    = YGList_G[jj];
         scalar YGInt = YGList_Int[jj];
@@ -262,6 +358,10 @@ event tracer_diffusion (i++) {
 
       double Sheatflux = lambda1vh*Strgrad;
       double Gheatflux = lambda2vh*Gtrgrad;
+  #ifdef Y_discriminante
+      if (y > Y_discriminante)
+        Gheatflux = 0.;      // laterale: parete adiabatica lato gas
+  #endif
 
 # ifdef AXI
       sST[] += Sheatflux*area*(y + p.y*Delta)/(Delta*y)*cm[];
@@ -622,105 +722,4 @@ event tracer_diffusion (i++) {
 
   check_and_correct_fractions (YGList_S, NGS, false);
   check_and_correct_fractions (YGList_G, NGS, true);
-}
-
-/* 
-This is actually a tracer_advection step.
-We put it here so that it is executed after the default
-tracer advection step.
-*/
-extern face vector ufsave;
-face vector u_prime[];
-event tracer_diffusion (i++,last) {
-
-foreach() {
-    f[] = clamp (f[], 0., 1.);
-    f[] = (f[] > F_ERR) ? f[] : 0.;
-    f[] = (f[] < 1.-F_ERR) ? f[] : 1.;
-    fS[] = f[]; fG[] = 1. - f[];
-  }
-
-  //Compute face gradients
-  face_fraction (fS, fsS);
-  face_fraction (fG, fsG);
-
-  check_and_correct_fractions (YGList_S, NGS, false);
-  check_and_correct_fractions (YGList_G, NGS, true);
-  check_and_correct_fractions (YSList,   NSS, false);
-
-#ifdef VARPROP
-  update_properties();
-#else
-  update_properties_constant();
-#endif
-
-  // lose tracer form and extrapolate fields
-  foreach() {
-    porosity[] = (f[] > F_ERR) ? porosity[]/f[] : 0.;
-#ifdef SOLVE_TEMPERATURE
-    TS[] = (f[] > F_ERR) ? TS[]/f[] : 0.;
-    TG[] = ((1. - f[]) > F_ERR) ? TG[]/(1. - f[]) : 0.;
-
-    TS[] = (f[] > F_ERR) ? TS[] : TG[];
-    TG[] = (f[] < 1. - F_ERR) ? TG[] : TS[];
-#endif
-
-    for (int jj=0; jj<NGS; jj++) { 
-      scalar YG_S = YGList_S[jj];
-      scalar YG_G = YGList_G[jj];
-
-      YG_S[] = (f[] > F_ERR) ? YG_S[]/f[] : 0.;
-      YG_G[] = (f[] < 1. - F_ERR) ? YG_G[]/(1. - f[]) : 0.;
-
-      YG_S[] = (f[] > F_ERR) ? YG_S[] : YG_G[];
-      YG_G[] = (f[] < 1. - F_ERR) ? YG_G[] : YG_S[];
-    }
-  }
-
-  advection_div(YGList_S, ufsave, dt);
-  advection_div(YGList_G, ufsave, dt);
-
-#ifdef SOLVE_TEMPERATURE
-  foreach_face() {
-    double ef = clamp(face_value(porosity, 0), 0., 1.);
-
-    double rhoGvh_S, rhoSvh;
-    double cpGvh_S, cpSvh;
-
-    #ifdef VARPROP
-    rhoGvh_S = face_value(rhoGv_S, 0); rhoSvh = face_value(rhoSv, 0);
-    cpGvh_S = face_value(cpGv_S, 0); cpSvh = face_value(cpSv, 0);
-    #else
-    rhoGvh_S = rhoG; rhoSvh = rhoS;
-    cpGvh_S = cpG; cpSvh = cpS;
-    #endif
-
-    double denom = rhoGvh_S*cpGvh_S*ef + rhoSvh*cpSvh*(1. - ef);
-    u_prime.x[] = (fsS.x[] > F_ERR && denom > 0.) ? // denom==0 in unfilled solid faces -> 0/0
-                  fsS.x[]*ufsave.x[]*(rhoGvh_S*cpGvh_S)/denom
-                  : 0.;
-  }
-
-  advection_div({TS}, u_prime, dt);
-# ifndef TEMPERATURE_PROFILE
-  advection_div({TG}, ufsave, dt);
-# endif
-#endif
-
-  // recover tracer form
-  foreach() {
-    porosity[] = (f[] > F_ERR) ? porosity[]*f[] : 0.;
-#ifdef SOLVE_TEMPERATURE
-    TS[] = (f[] > F_ERR) ? TS[]*f[] : 0.;
-    TG[] = ((1. - f[]) > F_ERR) ? TG[]*(1. - f[]) : 0.;
-#endif
-
-    for (int jj=0; jj<NGS; jj++) { 
-      scalar YG_S = YGList_S[jj];
-      scalar YG_G = YGList_G[jj];
-
-      YG_S[] = (f[] > F_ERR) ? YG_S[]*f[] : 0.;
-      YG_G[] = (f[] < 1. - F_ERR) ? YG_G[]*(1. - f[]) : 0.;
-    }
-  }
 }

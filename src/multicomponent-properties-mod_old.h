@@ -7,7 +7,7 @@ which is used as a sorce term for the velocity divergence, to
 describe low Mach compressibility effects. */
 
 #ifdef VARPROP
-#include "solid-thermal-conductivity.h"
+#include "solid-thermal-conductivity-mod.h"
 
 scalar rhoGv_G0[], rhoGv_S0[];
 extern scalar porosity;
@@ -34,9 +34,6 @@ void update_properties (void) {
     ThermoState tsGh, tsSh;
     double Diff_coeff[NGS];
     if (f[] > F_ERR && TS[] > 0.) {
-      // porosity fraction eps in [0,1]; the raw ratio can undershoot negative
-      // in f~F_ERR sliver cells, which makes pow(.,4./3.) a NaN (FE_INVALID).
-      double eps_frac = clamp (porosity[]/f[], 0., 1.);
       double xG[NGS], yG[NGS];
       double MWmixG;
       // Update internal gas properties
@@ -44,10 +41,7 @@ void update_properties (void) {
         scalar YG = YGList_S[jj];
         yG[jj] = YG[]/f[];
       }
-      // empty pore gas: skip the fill; the gas fields stay at their reset-0 value,
-      // which downstream consumers guard (MW>0 / denom>0) — do NOT fabricate a rho
-      // from zero mole fractions.
-      if (mole_from_mass (xG, &MWmixG, yG, NGS)) {
+      OpenSMOKE_MoleFractions_From_MassFractions (xG, &MWmixG, yG);
       MWmixG_S[] = MWmixG;
 
       tsGh.T = TS[]/f[];
@@ -71,13 +65,12 @@ void update_properties (void) {
       for(int jj=0; jj<NGS; jj++) {
         scalar DmixGv = DmixGList_S[jj];
         #ifdef CONST_DIFF
-        DmixGv[] = CONST_DIFF*pow(eps_frac, 4./3.);
+        DmixGv[] = CONST_DIFF*pow(porosity[]/f[], 4./3.);
         #else
-        DmixGv[] = Diff_coeff[jj]*pow(eps_frac, 4./3.);
+        DmixGv[] = Diff_coeff[jj]*pow(porosity[]/f[], 4./3.);
         #endif
       }
-      } // internal gas filled
-
+      
       // Update internal solid properties
       double xS[NSS], yS[NSS];
       double MWmixS;
@@ -85,28 +78,21 @@ void update_properties (void) {
         scalar YS = YSList[jj];
         yS[jj] = YS[]/f[];
       }
-      // fully-consumed solid: skip; rhoSv/cpSv/lambda1v stay at reset 0
-      // (guarded by downstream denom>0 checks).
-      if (solid_mole_from_mass (xS, &MWmixS, yS, NSS)) {
+      OpenSMOKE_SolidMoleFractions_From_SolidMassFractions (xS, &MWmixS, yS);
+
       tsSh.T = TS[]/f[];
       tsSh.P = Pref+p[];
       tsSh.x = xS;
-      foreach ()
-      if (y < Y_inert){
+
       rhoSv[] = tpS.rhov (&tsSh);
       cpSv[] = tpS.cpv (&tsSh);
-      } else {
-        rhoSv[] = tpS.rhov1 (&tsSh);
-      cpSv[] = tpS.cpv1 (&tsSh);
-      }
-
-      coord lambda_pf = pseudo_phase_thermal_conductivity(point, lambdaGv_S[],
-                                                          eps_frac,
-                                                          tsSh.T,
+    
+      coord lambda_pf = pseudo_phase_thermal_conductivity(point, lambdaGv_S[], 
+                                                          porosity[]/f[], 
+                                                          tsSh.T, 
                                                           f);
       foreach_dimension()
         lambda1v.x[] = lambda_pf.x;
-      } // internal solid filled
     }
 
     if (f[] < 1. - F_ERR && TG[] > 0.) {
@@ -117,8 +103,7 @@ void update_properties (void) {
         scalar YG = YGList_G[jj];
         yG[jj] = YG[]/(1.-f[]);
       }
-      // empty external gas: skip the fill (fields stay at reset 0, guarded downstream).
-      if (mole_from_mass (xG, &MWmixG, yG, NGS)) {
+      OpenSMOKE_MoleFractions_From_MassFractions (xG, &MWmixG, yG);
       MWmixG_G[] = MWmixG;
 
       tsGh.T = TG[]/(1.-f[]);
@@ -151,7 +136,6 @@ void update_properties (void) {
 
       foreach_dimension()
         lambda2v.x[] = lambdaGv_G[];
-      } // external gas filled
     }
   }
 }
