@@ -43,7 +43,8 @@ enum zeta_types {
   ZETA_SMOOTH,   // Smooth transition between states
   ZETA_SHARP,    // Sharp transition between states
   ZETA_LEVELSET, // Level set method, split based on distance to interface
-  ZETA_REACTION  // Split based on the local reaction rate
+  ZETA_REACTION,  // Split based on the local reaction rate
+  ZETA_2SOLIDI    // both CONST & SWELLING
 };
 
 enum zeta_types zeta_policy;
@@ -123,6 +124,19 @@ void set_zeta (enum zeta_types zeta_policy) {
     }
     break;
   }
+  case ZETA_2SOLIDI: {
+    foreach()
+    if (y > Y_inert){
+      zeta[] = 0.;
+    } else { 
+      zeta[] = 0.5;
+  }
+
+    }
+    break;
+  }
+
+  
 
   default: {
     fprintf (stderr, "Unknown Shrinking model\n");
