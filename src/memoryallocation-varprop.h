@@ -8,6 +8,7 @@ List are used to dynamically allocate the scalars according to the number of spe
 
 unsigned int NGS, NSS;
 scalar omega[];
+extern double H0;
 
 scalar* YGList_G    = NULL; // gas species in the gas phase
 scalar* YGList_S    = NULL; // gas species in the porous phase

@@ -27,8 +27,8 @@ void shift_field (scalar fts, scalar f, int dir);
 
 scalar prod[];
 extern scalar fS;
-
-/**
+extern double H0;
+/*
 ## Projection method for the solid phase velocity field
 We solve the Poisson equation for the velocity potential 'psi' and
 then compute the solid phase velocity field 'ubf' as the negative gradient

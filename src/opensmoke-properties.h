@@ -118,8 +118,8 @@ event defaults (i = 0) {
   tpS.rhov    = opensmoke_solprop_density;
   tpS.lambdav = opensmoke_solprop_thermalconductivity;
   tpS.cpv     = opensmoke_solprop_heatcapacity;
-  tpS.rhov1    = opensmoke_solprop_density1;
-  tpS.cpv1     = opensmoke_solprop_heatcapacity1;
+
+
 
   tpG.rhov    = opensmoke_gasprop_density;
   tpG.muv     = opensmoke_gasprop_viscosity;

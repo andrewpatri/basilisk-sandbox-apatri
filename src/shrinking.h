@@ -18,15 +18,15 @@ we implement various models to test their effect on the solution.
 #include "common-phasechange.h"
 
 double eps0 = 0.5;
-double eps01 = 0.5
+double eps01 = 0.5;
 double rhoS = 100.;
 double rhoS1 = 100.;
 double rhoG = 1.;
 double muG  = 1e-5;
 
 extern scalar omega;
-
-scalar porosity[];
+extern double H0; 
+scalanporosity[];
 scalar zeta[];
 
 /**
@@ -131,9 +131,9 @@ void set_zeta (enum zeta_types zeta_policy) {
     } else { 
       zeta[] = 0.5;
   }
-
-    }
     break;
+    }
+    
   }
 
   
@@ -143,7 +143,7 @@ void set_zeta (enum zeta_types zeta_policy) {
     return;
   }
   }
-}
+
 
 /**
 The porosity is appended as tracer to the volume fraction field 'f'

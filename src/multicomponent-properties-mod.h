@@ -96,8 +96,8 @@ void update_properties (void) {
       rhoSv[] = tpS.rhov (&tsSh);
       cpSv[] = tpS.cpv (&tsSh);
       } else {
-        rhoSv[] = tpS.rhov1 (&tsSh);
-      cpSv[] = tpS.cpv1 (&tsSh);
+        rhoSv[] = 3200;
+      cpSv[] = 0.00361;
       }
 
       coord lambda_pf = pseudo_phase_thermal_conductivity(point, lambdaGv_S[],
