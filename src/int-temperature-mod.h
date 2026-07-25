@@ -97,7 +97,7 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
    #if QSOURCE
  if (data->c.y <  Y_descriminante) {
     gsl_vector_set(fdata, 0,
-                 -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
+                 //-divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                  + lambda1vh * gradTSn 
                  + lambda2vh * gradTGn
                  - data->q_sorg *data->emissivity );

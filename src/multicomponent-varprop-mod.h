@@ -266,6 +266,7 @@ event tracer_diffusion (i++) {
 #ifdef Y_discriminante
       if (y > Y_discriminante)
         Gheatflux = 0.;      // laterale: parete adiabatica lato gas
+        Sheatflux = 0.;      // laterale: parete adiabatica lato solido, ok che Tint dipende solo da solido, ma così va bene cmq ripeto due volte stessa cosa
   #endif
 # ifdef AXI
       sST[] += Sheatflux*area*(y + p.y*Delta)/(Delta*y)*cm[];
