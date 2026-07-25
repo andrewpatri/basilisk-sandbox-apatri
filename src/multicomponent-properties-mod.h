@@ -91,7 +91,7 @@ void update_properties (void) {
       tsSh.T = TS[]/f[];
       tsSh.P = Pref+p[];
       tsSh.x = xS;
-      foreach ()
+      
       if (y < Y_inert){
       rhoSv[] = tpS.rhov (&tsSh);
       cpSv[] = tpS.cpv (&tsSh);
