@@ -60,11 +60,11 @@ double opensmoke_solprop_heatcapacity (void * p) {
   return OpenSMOKE_SolProp_HeatCapacity (ts->x);
 }
 
-extern double cps1;
+/*extern double cps1;
 double opensmoke_solprop_heatcapacity1 (void * p) {
   return cps1;
 }
-
+*/
 /**
 ### *opensmoke_solprop_density*: dummy function, rhos is constant and is not read from OS
 */
@@ -78,11 +78,11 @@ double opensmoke_solprop_density (void * p) {
 ### *opensmoke_solprop_density*: dummy function, rhos is constant and is not read from OS for inert
 */
 
-extern double rhoS1;
+/*extern double rhoS1;
 
 double opensmoke_solprop_density1 (void * p) {
   return rhoS1;
-}
+}*/
 /**
 ### *opensmoke_solprop_thermalconductivity()*: dummy function, lambdas is constant and is not read from OS
 */
