@@ -107,7 +107,7 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
    }
    #else 
    gsl_vector_set(fdata, 0,
-                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivit
+                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
                   + lambda1vh * gradTSn
                   + lambda2vh * gradTGn);
    #endif                            
