@@ -26,7 +26,7 @@ double muG  = 1e-5;
 
 extern scalar omega;
 extern double H0; 
-scalanporosity[];
+scalar porosity[];
 scalar zeta[];
 
 /**
@@ -134,7 +134,7 @@ void set_zeta (enum zeta_types zeta_policy) {
     break;
     }
     
-  }
+  
 
   
 
@@ -143,7 +143,7 @@ void set_zeta (enum zeta_types zeta_policy) {
     return;
   }
   }
-
+}
 
 /**
 The porosity is appended as tracer to the volume fraction field 'f'

@@ -6,6 +6,9 @@ The properties are computed as a function of the local thermodynamic state, whic
 
 #include "opensmoke.h"
 #include "variable-properties.h"
+#ifndef Y_inert
+#define Y_inert L0
+#endif 
 
 double opensmoke_gasprop_density (void * p) {
   ThermoState * ts = (ThermoState *)p;
