@@ -1,0 +1,512 @@
+/* This file is set to rappresent the experimental setup from https://www.sciencedirect.com/science/article/pii/S2352710224001268?via%3Dihub*/
+
+// define section
+#define NO_ADVECTION_DIV 1 // no divergene term in advection
+#define SOLVE_TEMPERATURE 1 // solve also temperature equation ( entalpic balance)
+//#define RADIATION_INTERFACE 0.86 // valore dell'emissività
+#define MOLAR_DIFFUSION 1 // use molar diffusion instead of mass
+#define FICK_CORRECTED 1 // enable fick correction for multicomponent
+#define MASS_DIFFUSION_ENTHALPY 1 // enable enthalpic contribution to mass  flux 
+#define Y_discriminante (3.95*H0)
+#define QSOURCE 1 //activate q_sorg
+#define Y_inert (2*H0)
+
+// ifndef section, here i would implement the possibility to change the q source, but need to be refined since it is a power 
+// at this stage T_ENV so i can test the geometry 
+#ifndef T_ENV
+# define T_ENV 298
+#endif
+#ifndef a_q
+# define a_q 0.28
+#endif
+#ifndef b_q
+# define b_q 1.79
+#endif 
+#ifndef texp
+# define texp 665
+#endif
+// function definition if they are specific
+double q_sorg (const double t){
+  if (t < texp) {
+   const double a = a_q; 
+   const double b = b_q;
+   return a*pow((t), b);
+  }
+   else {
+   const double a = a_q; 
+   const double b = b_q;
+   return a*pow((texp), b);
+  }
+ // if b negative use +0.0000001 to avoid dividing by zero  
+ }
+
+
+// include section
+
+#include "axi.h"
+#include "navier-stokes/centered-phasechange.h"
+#include "opensmoke-properties.h" // properties
+#include "two-phase.h"// for VOF and defines fraction and colors
+#include "shrinking.h" // shriniking models ATTENTION choose the good one remember to define
+#include "multicomponent-varprop-mod.h" // here there is int-temp... so before this define the q_sorg
+#include "darcy.h" // to take into account flow resistance due to porosity
+#include "view.h"
+#include "superquadric.h"
+// dati base
+double Uin = 0.; //no velocity in exp
+double tend = 800; //simulation time.  If need to compute temperature for its test condition before  the insertion to measure the heat flux
+double coordinata_x = 0;
+double coordinata_y = 0;
+// Boundary condition
+u.n[right]    = neumann (0.);
+u.t[right]    = neumann (0.);
+p[right]      = dirichlet (0.);
+pf[right]     = dirichlet (0.);
+psi[right]    = dirichlet (0.);
+
+u.n[top]      = neumann (0.);
+u.t[top]      = neumann (0.);
+p[top]        = dirichlet (0.);
+pf[top]       = dirichlet (0.);
+psi[top]      = dirichlet (0.);
+
+u.n[left]    = dirichlet (0.);
+u.t[left]    = dirichlet (0.);
+p[left]      = neumann(0.);
+pf[left]     = neumann (0.);
+psi[left]    = dirichlet (0.);
+
+int maxlevel = 9; int minlevel = 2; // risoluzione minima e massima 128 o 4 celle epr lato
+double H0 = 2e-2; // initially
+double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, contenuto di umidità iniziale
+double solid_mass_old;
+double AREA_FACCIA = 0.;
+double solid_mass = 0.;
+
+int main() {
+  
+ // lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
+                                                                                               
+
+  rhoS = 1500 ;  // kg/m3
+  eps0 = 0.52;
+  lambdaSmodel =L_KK;// L_2SOLIDI;
+  zeta_policy = ZETA_CONST; //ZETA_2SOLIDI;
+  rhoS1 = 3200 ;  // kg/m3
+  eps01 = 0.52;//0.9375;
+ // cps1 = 0.003661; // J/mol/K
+  TS0 = 298.; TG0 = T_ENV; // the change this to 300 K
+  
+  emissivity = emissivity_lu;
+  //dummy properties
+  rho1 = 1., rho2 = 1.;
+  mu1 = 1., mu2 = 1.;
+
+  
+
+
+L0 = H0*15.085; // first try just the block of wood
+  
+
+origin (0, 0);
+
+  DT = 1e-2;
+
+  shift_prod = true;
+ kinfolder = "biomass/dummy-solid";
+ //kinfolder = "biomass/Solid-only-2507";
+  init_grid(1 << maxlevel);
+
+  run();
+}
+
+#define rectangle(x,y,H0)()
+//#define circle(x,y,R)(sq(R) - sq(x) - sq(y))
+event init(i=0) {
+    scalar f0[];
+  // fraction(f, circle(x,y,H0));
+  fraction (f0, superquadric(x, y, 20, H0, 3*H0));
+
+  // dummy-solid-gas no info of h20 in air
+ gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1;
+  //gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.756;
+  //gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.244;
+  //gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.00;
+  
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
+  
+ 
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.4205;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2461;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0014;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.1926;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0485;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
+ 
+  sol_start2[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 1.;
+ 
+  
+
+  
+	
+  solid_mass0 = 0.;
+  foreach (reduction(+:solid_mass0)){
+    
+    solid_mass0 += f0[]*(1. - eps0)*rhoS*dv(); //Note: (1-e) = (1-ef)!= (1-e)f
+	  
+    }
+  solid_ash = 0.;
+  foreach (reduction(+:solid_ash)){
+	solid_ash +=f0[]*( 
+  fprintf(stderr, "DEBUG = %g\n", solid_mass0);
+  for (int jj=0; jj<NGS; jj++) {
+    scalar YG = YGList_G[jj];
+    if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
+    /* YG[right] = dirichlet (1.);*/ YG[right] = dirichlet (0.756);
+    /* YG[top] = dirichlet (1.);// */ YG[top] = dirichlet(0.756);     
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
+      YG[right] = dirichlet (0.244);
+      YG[top] = dirichlet(0.244); 
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
+      YG[right] = dirichlet (0.);
+      YG[top] = dirichlet(0.); 
+     } else {
+      YG[right] = dirichlet (0.);
+      YG[top] = dirichlet(0.);
+    }
+  }
+
+    foreach () {
+    if (y < Y_inert){
+      f[] = f0[];
+      porosity[] = eps0*f[];
+      } else {  f[] = f0[];
+      porosity[] = eps01*f[];
+      }
+    }
+  }
+  
+  foreach()
+    u.x[] = f[] > F_ERR ? 0. : Uin;
+// Temperature
+
+    TG[right] = neumann(0.); // dirichlet(TG0);// to use when then setting T0 in gas phase
+    TG[left] = neumann (0.);
+    TG[top] =  neumann(0.);
+  //  TG[bottom] = neumann(0.);
+  
+      
+    AREA_FACCIA = 4.*H0*H0*M_PI;
+    
+}
+
+event movie( t +=2){
+
+
+  scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
+    scalar XMOIST[];
+      foreach(){
+        if (f[] > F_ERR){
+        XMOIST[] = MOIST_S[]/f[];  
+        } 
+      }
+
+
+clear();
+cells();
+view(theta=0, phi=0, psi=0, width = 1080, height = 1080);
+squares("T", spread=-1,linear = true, min =TS0, max =1250);// cbar = true, border = true, pos = {-H0,0}, format = "%9.5f", levels = 20 );
+labels("T");
+draw_vof("f");
+save("TeMOIST-8.mp4");
+} 
+event findcoord (i = 1 ) {
+ foreach(reduction(+:coordinata_x)reduction(+:coordinata_y)){
+  if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta && y >0 ){
+  
+   coordinata_x += x-Delta;
+   coordinata_y += y;
+        }
+      }
+
+}
+
+
+event output(t+=1) {
+fprintf (stderr, "%g\n", t);
+
+  char name[80];
+  sprintf(name, "OutputData");
+  static FILE * fp = fopen (name, "w");
+  
+ 
+  if ( i == 1 ) {
+	solid_mass_old = solid_mass0;
+  } else {
+	solid_mass_old = solid_mass;
+  }
+   fprintf (stderr, "DEBUG old = %g\n", solid_mass_old);			
+  //log mass profile
+  
+  solid_mass = 0;
+  foreach (reduction(+:solid_mass)){
+    if ( y < Y_inert){
+    solid_mass += (f[]-porosity[])*rhoS*dv();
+    }
+    }
+ fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
+ fprintf (stderr, "DEBUG AREA_FACCIA = %g\n", AREA_FACCIA); 
+ double rate = 0;
+ rate = (solid_mass_old - solid_mass)*4.*1e3/AREA_FACCIA; // g/m2/s 
+ fprintf (stderr, "DEBUG rate = %g\n", rate);
+
+// T on the surface
+double T_surf = 0.;
+double L = 0., x_sum = 0., y_sum = 0.;
+
+ foreach(reduction(max:L)reduction(max:x_sum)reduction(max:y_sum)){
+ if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta && y >0 ){ //&& x > H0 + Delta/2 && x < H0 - Delta/2){
+  coord m = mycs(point,f);
+  double alpha_Tsurf = plane_alpha(f[],m);
+  coord p; 
+  double lung = plane_area_center(m, alpha_Tsurf, &p); // &p puntatore e ok, nella funzione devo indicare coord *p per dirgli che riceverà coord e dovrà prendersela e dovrà modificarlo mentre m viene solo preso
+  
+  double x_piccolino = x + p.x * Delta;
+  double y_piccolino = y + p.y * Delta;
+  
+  L = lung;
+  x_sum = x_piccolino * lung;
+  y_sum = y_piccolino * lung;
+    }
+  }
+  T_surf = interpolate (T, x_sum/L, y_sum/L); // interp (TS[]/f[], p.x, p.y);
+  
+  
+fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
+
+
+// centroide nel secondo punto di campionamento
+double T_surf2 = 0.;
+double L2 = 0., x_sum2 = 0., y_sum2 = 0.;
+
+ foreach(reduction(max:L2)reduction(max:x_sum2)reduction(max:y_sum2)){
+ if (f[] > F_ERR && f[] < 1.-F_ERR && y < 2*H0-(3e-3)+Delta/2 && y > 2*H0-(3e-3) - Delta/2 ){ //&& x > H0 + Delta/2 && x < H0 - Delta/2){
+  coord m2 = mycs(point,f);
+  double alpha_Tsurf2 = plane_alpha(f[],m2);
+  coord p2; 
+  double lung2 = plane_area_center(m2, alpha_Tsurf2, &p2); // &p puntatore e ok, nella funzione devo indicare coord *p per dirgli che riceverà coord e dovrà prendersela e dovrà modificarlo mentre m viene solo preso
+  
+  double x_piccolino2 = x + p2.x * Delta;
+  double y_piccolino2 = y + p2.y * Delta;
+  
+  L2 = lung2;
+  x_sum2 = x_piccolino2 * lung2;
+  y_sum2 = y_piccolino2 * lung2;
+    }
+  }
+  T_surf2 = interpolate (T, x_sum2/L2, y_sum2/L2); // interp (TS[]/f[], p.x, p.y);
+  
+  
+fprintf (stderr, "DEBUG Tsurfi= %g\n", T_surf);
+
+
+  double T6mm  = interpolate (T, H0-(6e-3), 0.);
+fprintf (stderr, "DEBUG T6mm= %g\n", T6mm);
+
+  double T3mm    = interpolate (T, H0-(3e-3), 0);
+fprintf (stderr, "DEBUG T3mm= %g\n", T3mm);
+
+  double T6mm2  = interpolate (T, H0-(6e-3), 2*H0-(3e-3));
+fprintf (stderr, "DEBUG T6m2m= %g\n", T6mm2);
+
+  double T3mm2    = interpolate (T, H0-(3e-3), 2*H0-(3e-3));
+fprintf (stderr, "DEBUG T3mm2= %g\n", T3mm2);
+double q;  
+ q = q_sorg(t);
+fprintf (stderr, "DEBUG q= %g\n", q);
+// MOIST
+scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
+scalar XMOIST[];
+ foreach(){
+        if (f[] > F_ERR){
+        XMOIST[] = MOIST_S[]/f[];  
+        }else{
+        XMOIST[] = 0.;
+        }
+      }
+ 
+
+ 
+ 
+double MOIST_3mm = 0.;
+  MOIST_3mm = interpolate (XMOIST,H0-(3e-3),0);
+ fprintf (stderr, "DEBUG mois 3 0= %g\n", MOIST_3mm);
+double MOIST_6mm = 0.;
+   MOIST_6mm = interpolate (XMOIST,H0-(6e-3),0);
+
+double MOIST_10mm = 0.;
+MOIST_10mm = interpolate (XMOIST, H0-(10e-3),0);
+
+// HEMI
+scalar HEMI_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("XYHW")];
+scalar XXYHW[];
+foreach(){
+        if (f[] > F_ERR ){
+        XXYHW[] = HEMI_S[]/f[];
+      }else{
+      XXYHW[] = 0.;
+      }
+     }
+
+double HEMI_3mm = 0.;
+HEMI_3mm = interpolate (XXYHW,H0-(3e-3),0);
+double HEMI_6mm = 0.;
+HEMI_6mm = interpolate (XXYHW,H0-(6e-3),0);
+
+// CELL
+scalar CELL_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("CELL")];
+scalar XCELL[];
+foreach(){
+        if (f[] > F_ERR ){
+        XCELL[] = CELL_S[]/f[];  
+        }else{
+        XCELL[] = 0.;
+        }
+      }
+
+
+double CELL_3mm = 0.;
+CELL_3mm = interpolate (XCELL,H0-(3e-3),0);
+double CELL_6mm = 0.;
+CELL_6mm = interpolate (XCELL,H0-(6e-3),0);
+
+ // CELL
+ scalar LIGH_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("LIGH")];
+ scalar XLIGH[];
+ foreach(){
+           if (f[] > F_ERR ){
+           XLIGH[] = LIGH_S[]/f[];
+           }else{
+            XLIGH[] = 0.;
+           }
+          }      
+ 
+ double LIGH_3mm = 0.;
+  LIGH_3mm = interpolate (XLIGH,H0-(3e-3),0);
+ double LIGH_6mm = 0.;
+  LIGH_6mm = interpolate (XLIGH,H0-(6e-3),0);
+
+  scalar LIGO_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("LIGO")];
+  scalar XLIGO[];
+   foreach(){
+   if (f[] > F_ERR ){
+       XLIGO[] = LIGO_S[]/f[];
+           }else{
+            XLIGO[] = 0.;
+           }
+         }
+   
+   double LIGO_3mm = 0.;
+   LIGO_3mm = interpolate (XLIGO,H0-(3e-3),0);
+   double LIGO_6mm = 0.;
+   LIGO_6mm = interpolate (XLIGO,H0-(6e-3),0);
+
+   scalar LIGC_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("LIGC")];
+   scalar XLIGC[];
+     foreach(){
+       if (f[] > F_ERR ){
+         XLIGC[] = LIGC_S[]/f[];
+          }else{
+          XLIGC[] = 0.;
+          } 
+         }
+   
+   double LIGC_3mm = 0.;
+   LIGC_3mm = interpolate (XLIGC,H0-(3e-3),0);
+   double LIGC_6mm = 0.;
+   LIGC_6mm = interpolate (XLIGC,H0-(6e-3),0);
+
+
+  scalar H2O_GS = YGList_S[OpenSMOKE_IndexOfSpecies ("H2O")];
+  
+
+  scalar YH2O[];
+
+  foreach(){
+    if (f[] > F_ERR){
+    YH2O[] = H2O_GS[]/f[];
+     }else{
+        YH2O[] = 0.;
+        }
+     }
+
+    
+    double H2O_3mm = 0.;
+    H2O_3mm = interpolate (YH2O,H0-(3e-3),0);
+    double H2O_6mm = 0.;
+    H2O_6mm = interpolate (YH2O,H0-(6e-3),0);
+     fprintf (stderr, "DEBUG 4= %g\n", H2O_6mm);
+
+  
+  
+    double MOIST_surf = 0.;
+    double fnointerp = 0.;
+    double HEMI_surf = 0.;
+    double CELL_surf = 0.;
+    double LIGH_surf = 0.;
+    double LIGO_surf = 0.;
+    double LIGC_surf = 0.;
+    double H2O_surf = 0.;
+ foreach(reduction(max:MOIST_surf)reduction(max:HEMI_surf)reduction(max:CELL_surf)reduction(max:LIGH_surf)reduction(max:LIGO_surf)reduction(max:LIGC_surf)reduction(max:H2O_surf)){
+  if (f[] > F_ERR && f[] < 1.-F_ERR && y < Delta && y >0 ){
+   MOIST_surf = XMOIST[];
+   HEMI_surf = XXYHW[];
+   CELL_surf = XCELL[];
+   LIGH_surf = XLIGH[];
+   LIGO_surf = XLIGO[];
+   LIGC_surf = XLIGC[];
+   H2O_surf= YH2O[];
+        }
+      }
+      
+  double sum = 0;
+  sum = MOIST_surf + HEMI_surf + CELL_surf + LIGH_surf + LIGO_surf + LIGC_surf;
+ if (sum > 1.1) {
+  char name[80];
+  sprintf (name, "snapshot-%d", i);
+  dump (name);
+}
+  
+  fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, T_surf, q, MOIST_surf, MOIST_3mm, MOIST_6mm, 
+            HEMI_surf, HEMI_3mm, HEMI_6mm, CELL_surf, CELL_3mm, CELL_6mm, LIGH_surf, LIGH_3mm, LIGH_6mm, LIGC_surf, 
+             LIGC_3mm, LIGC_6mm, LIGO_surf, LIGO_3mm, LIGO_6mm, H2O_surf, H2O_3mm, H2O_6mm, MOIST_10mm,sum,
+             T6mm2, T3mm2, T_surf2); 
+  
+  fflush(fp);
+}
+
+#if TREE
+event adapt (i++) {
+  scalar inert = YGList_G[OpenSMOKE_IndexOfSpecies ("N2")];
+  scalar oxi = YGList_G[OpenSMOKE_IndexOfSpecies ("O2")];
+  adapt_wavelet_leave_interface ({T, u.x, u.y, inert, oxi}, {f},
+    (double[]){1.e-1, 1.e-1, 1.e-1, 1e-1,1e-1}, maxlevel, minlevel, 2);
+}
+#endif
+
+
+event dump (i = 29714) {
+  dump("last-snapshot");
+
+  clear();
+  squares ("T", linear = true);
+  draw_vof ("f", lw = 1.5);
+  save ("restart.ppm");
+}
+
+
+event stop (t = tend);
+
+
