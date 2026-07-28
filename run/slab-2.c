@@ -7,7 +7,7 @@
 #define MOLAR_DIFFUSION 1 // use molar diffusion instead of mass
 #define FICK_CORRECTED 1 // enable fick correction for multicomponent
 #define MASS_DIFFUSION_ENTHALPY 1 // enable enthalpic contribution to mass  flux 
-#define Y_discriminante (3.95*H0)
+// #define Y_discriminante (3.95*H0)
 #define QSOURCE 1 //activate q_sorg
 #define Y_inert (2*H0)
 
@@ -82,7 +82,8 @@ double solid_mass0 = 0., moisture0 = 0.; // massa della fase solida iniziale, co
 double solid_mass_old;
 double AREA_FACCIA = 0.;
 double solid_mass = 0.;
-
+double solid_ash = 0.;
+scalar rho_init[];
 int main() {
   
  // lambdaS = 0.1987; // on the pubblication another value used but it's coming from optimization of their parameters
@@ -113,7 +114,7 @@ origin (0, 0);
   DT = 1e-2;
 
   shift_prod = true;
- kinfolder = "biomass/dummy-solid";
+ kinfolder = "biomass/dummy-solid-1";
  //kinfolder = "biomass/Solid-only-2507";
   init_grid(1 << maxlevel);
 
@@ -145,39 +146,14 @@ event init(i=0) {
   //sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
  
   sol_start2[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 1.;
- 
-  
-
-  
-	
-  solid_mass0 = 0.;
-  foreach (reduction(+:solid_mass0)){
-    
-    solid_mass0 += f0[]*(1. - eps0)*rhoS*dv(); //Note: (1-e) = (1-ef)!= (1-e)f
-	  
-    }
-  solid_ash = 0.;
-  foreach (reduction(+:solid_ash)){
-	solid_ash +=f0[]*( 
-  fprintf(stderr, "DEBUG = %g\n", solid_mass0);
-  for (int jj=0; jj<NGS; jj++) {
-    scalar YG = YGList_G[jj];
-    if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
-    /* YG[right] = dirichlet (1.);*/ YG[right] = dirichlet (0.756);
-    /* YG[top] = dirichlet (1.);// */ YG[top] = dirichlet(0.756);     
-     } else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
-      YG[right] = dirichlet (0.244);
-      YG[top] = dirichlet(0.244); 
-     } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
-      YG[right] = dirichlet (0.);
-      YG[top] = dirichlet(0.); 
-     } else {
-      YG[right] = dirichlet (0.);
-      YG[top] = dirichlet(0.);
+  foreach(){
+    if (y>Y_inert){
+      rho_init[] = rhoS1;
+    } else {
+      rho_init[] = rhoS;
     }
   }
-
-    foreach () {
+  foreach () {
     if (y < Y_inert){
       f[] = f0[];
       porosity[] = eps0*f[];
@@ -185,7 +161,43 @@ event init(i=0) {
       porosity[] = eps01*f[];
       }
     }
+  
+
+  
+	
+  solid_mass0 = 0.;
+  foreach (reduction(+:solid_mass0)){
+    
+    solid_mass0 += f[]*(1. - porosity[])*rho_init[]*dv(); //Note: (1-e) = (1-ef)!= (1-e)f
+	  
+    }
+  solid_ash = 0.;
+  foreach (reduction(+:solid_ash)){
+    if (rho_init > rhoS){
+	solid_ash += f[]*(1. - porosity[])*rho_init[]*dv();
+    }
   }
+
+  solid_mass0 = solid_mass0 - solid_ash;
+  fprintf(stderr, "DEBUG = %g\n", solid_mass0);
+  for (int jj=0; jj<NGS; jj++) {
+    scalar YG = YGList_G[jj];
+    if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
+     YG[right] = dirichlet (1.);// YG[right] = dirichlet (0.756);
+     YG[top] = dirichlet (1.);// / YG[top] = dirichlet(0.756);     
+     /*} else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
+      YG[right] = dirichlet (0.244);
+      YG[top] = dirichlet(0.244); 
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
+      YG[right] = dirichlet (0.);
+      YG[top] = dirichlet(0.); */
+     } else {
+      YG[right] = dirichlet (0.);
+      YG[top] = dirichlet(0.);
+    }
+  }
+
+    
   
   foreach()
     u.x[] = f[] > F_ERR ? 0. : Uin;
@@ -251,10 +263,10 @@ fprintf (stderr, "%g\n", t);
   
   solid_mass = 0;
   foreach (reduction(+:solid_mass)){
-    if ( y < Y_inert){
-    solid_mass += (f[]-porosity[])*rhoS*dv();
+   
+    solid_mass += (f[]-porosity[])*rho_init[]*dv();
     }
-    }
+  solid_mass = solid_mass - solid_ash;
  fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
  fprintf (stderr, "DEBUG AREA_FACCIA = %g\n", AREA_FACCIA); 
  double rate = 0;
@@ -325,7 +337,7 @@ fprintf (stderr, "DEBUG T3mm2= %g\n", T3mm2);
 double q;  
  q = q_sorg(t);
 fprintf (stderr, "DEBUG q= %g\n", q);
-// MOIST
+/*// MOIST
 scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
 scalar XMOIST[];
  foreach(){
@@ -472,17 +484,16 @@ CELL_6mm = interpolate (XCELL,H0-(6e-3),0);
       
   double sum = 0;
   sum = MOIST_surf + HEMI_surf + CELL_surf + LIGH_surf + LIGO_surf + LIGC_surf;
- if (sum > 1.1) {
-  char name[80];
-  sprintf (name, "snapshot-%d", i);
-  dump (name);
-}
+
   
   fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n", 
             t, solid_mass/solid_mass0, T6mm, T3mm, T_surf, q, MOIST_surf, MOIST_3mm, MOIST_6mm, 
             HEMI_surf, HEMI_3mm, HEMI_6mm, CELL_surf, CELL_3mm, CELL_6mm, LIGH_surf, LIGH_3mm, LIGH_6mm, LIGC_surf, 
              LIGC_3mm, LIGC_6mm, LIGO_surf, LIGO_3mm, LIGO_6mm, H2O_surf, H2O_3mm, H2O_6mm, MOIST_10mm,sum,
              T6mm2, T3mm2, T_surf2); 
+  */
+  fprintf (fp, "%g %g %g %g %g %g %g %g %g\n", 
+            t, solid_mass/solid_mass0, T6mm, T3mm, T_surf, q, T6mm2, T3mm2, T_surf2);            
   
   fflush(fp);
 }
@@ -496,15 +507,6 @@ event adapt (i++) {
 }
 #endif
 
-
-event dump (i = 29714) {
-  dump("last-snapshot");
-
-  clear();
-  squares ("T", linear = true);
-  draw_vof ("f", lw = 1.5);
-  save ("restart.ppm");
-}
 
 
 event stop (t = tend);
