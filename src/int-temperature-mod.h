@@ -12,9 +12,6 @@ https://github.com/Riccaraccio/basilisk-sandbox-rcaraccio/blob/master/src/int-te
 # define USE_GSL 1
 #endif
 #include "fsolve-gsl.h"
-#ifndef Y_discriminante
-# define Y_discriminante L0
-#endif
 #ifndef RADIATION_TEMP
 #define RADIATION_TEMP TG0
 #endif
@@ -97,21 +94,29 @@ int EqTemperature (const gsl_vector * xdata, void * params, gsl_vector * fdata) 
   double lambda1vh = n.x / (n.x + n.y) * lambda1v.x[] + n.y / (n.x + n.y) * lambda1v.y[];
   double lambda2vh = n.x / (n.x + n.y) * lambda2v.x[] + n.y / (n.x + n.y) * lambda2v.y[];
    #if QSOURCE
- if (data->c.y <  Y_discriminante) {
-    gsl_vector_set(fdata, 0,
-                 //-divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
-                 + lambda1vh * gradTSn 
-                 + lambda2vh * gradTGn
-                 - data->q_sorg *data->emissivity );
-  } else {
-   gsl_vector_set(fdata, 0,
+    #ifdef Y_discriminante
+       if (data->c.y <  Y_discriminante) {
+        gsl_vector_set(fdata, 0,
+                   //-divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
+                   + lambda1vh * gradTSn 
+                   + lambda2vh * gradTGn
+                   - data->q_sorg *data->emissivity );
+      } else {
+        gsl_vector_set(fdata, 0,
                  + lambda1vh * gradTSn);
-   }
+      }
+    #else
+      gsl_vector_set(fdata, 0,
+                  //-divq_rad_int(TInti, RADIATION_TEMP, data->emissivity) // due to qnet in paper
+                  + lambda1vh * gradTSn 
+                  + lambda2vh * gradTGn
+                  - data->q_sorg *data->emissivity );
+    #endif 
    #else 
-   gsl_vector_set(fdata, 0,
-                  -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
-                  + lambda1vh * gradTSn
-                  + lambda2vh * gradTGn);
+     gsl_vector_set(fdata, 0,
+                    -divq_rad_int(TInti, RADIATION_TEMP, data->emissivity)
+                    + lambda1vh * gradTSn
+                    + lambda2vh * gradTGn);
    #endif                            
   // }
   return GSL_SUCCESS;
