@@ -12,7 +12,9 @@ https://github.com/Riccaraccio/basilisk-sandbox-rcaraccio/blob/master/src/int-te
 # define USE_GSL 1
 #endif
 #include "fsolve-gsl.h"
-
+#ifndef Y_discriminante
+# define Y_discriminante L0
+#endif
 #ifndef RADIATION_TEMP
 #define RADIATION_TEMP TG0
 #endif
