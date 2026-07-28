@@ -114,8 +114,8 @@ origin (0, 0);
   DT = 1e-2;
 
   shift_prod = true;
- kinfolder = "biomass/dummy-solid-1";
- //kinfolder = "biomass/Solid-only-2507";
+ //kinfolder = "biomass/dummy-solid-1";
+ kinfolder = "biomass/Solid-only-2507";
   init_grid(1 << maxlevel);
 
   run();
@@ -129,21 +129,21 @@ event init(i=0) {
   fraction (f0, superquadric(x, y, 20, H0, 3*H0));
 
   // dummy-solid-gas no info of h20 in air
- gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1;
-  //gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.756;
-  //gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.244;
-  //gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.00;
+ //gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 1;
+  gas_start[OpenSMOKE_IndexOfSpecies ("N2")] = 0.756;
+  gas_start[OpenSMOKE_IndexOfSpecies ("O2")] = 0.244;
+  gas_start[OpenSMOKE_IndexOfSpecies ("CO2")] = 0.00;
   
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
-  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("BIOMASS")]  = 1;
+  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CHAR")]  = 0;
   
  
-  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.4205;
-  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2461;
-  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0014;
-  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.1926;
-  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0485;
-  //sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("CELL")]  = 0.4205;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("XYHW")]  = 0.2461;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGO")]  = 0.0014;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGH")]  = 0.1926;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("LIGC")]  = 0.0485;
+  sol_start[OpenSMOKE_IndexOfSolidSpecies ("MOIST")]  = 0.0909;
  
   sol_start2[OpenSMOKE_IndexOfSolidSpecies ("ASH")]  = 1.;
   foreach(){
@@ -183,14 +183,14 @@ event init(i=0) {
   for (int jj=0; jj<NGS; jj++) {
     scalar YG = YGList_G[jj];
     if (jj == OpenSMOKE_IndexOfSpecies ("N2")) { // change when adding also 02
-     YG[right] = dirichlet (1.);// YG[right] = dirichlet (0.756);
-     YG[top] = dirichlet (1.);// / YG[top] = dirichlet(0.756);     
-     /*} else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
+     /*YG[right] = dirichlet (1.);*/ YG[right] = dirichlet (0.756);
+     /*YG[top] = dirichlet (1.);*/ YG[top] = dirichlet(0.756);     
+     } else if (jj == OpenSMOKE_IndexOfSpecies ("O2")) {
       YG[right] = dirichlet (0.244);
       YG[top] = dirichlet(0.244); 
      } else if (jj == OpenSMOKE_IndexOfSpecies ("CO2")) {
       YG[right] = dirichlet (0.);
-      YG[top] = dirichlet(0.); */
+      YG[top] = dirichlet(0.); 
      } else {
       YG[right] = dirichlet (0.);
       YG[top] = dirichlet(0.);
@@ -337,7 +337,7 @@ fprintf (stderr, "DEBUG T3mm2= %g\n", T3mm2);
 double q;  
  q = q_sorg(t);
 fprintf (stderr, "DEBUG q= %g\n", q);
-/*// MOIST
+// MOIST
 scalar MOIST_S = YSList[OpenSMOKE_IndexOfSolidSpecies ("MOIST")];
 scalar XMOIST[];
  foreach(){
@@ -491,10 +491,10 @@ CELL_6mm = interpolate (XCELL,H0-(6e-3),0);
             HEMI_surf, HEMI_3mm, HEMI_6mm, CELL_surf, CELL_3mm, CELL_6mm, LIGH_surf, LIGH_3mm, LIGH_6mm, LIGC_surf, 
              LIGC_3mm, LIGC_6mm, LIGO_surf, LIGO_3mm, LIGO_6mm, H2O_surf, H2O_3mm, H2O_6mm, MOIST_10mm,sum,
              T6mm2, T3mm2, T_surf2); 
-  */
+  /*
   fprintf (fp, "%g %g %g %g %g %g %g %g %g\n", 
             t, solid_mass/solid_mass0, T6mm, T3mm, T_surf, q, T6mm2, T3mm2, T_surf2);            
-  
+  */
   fflush(fp);
 }
 
