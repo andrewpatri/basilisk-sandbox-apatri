@@ -31,8 +31,7 @@ double q_sorg (const double t){
    const double a = a_q; 
    const double b = b_q;
    return a*pow((t), b);
-  }
-   else {
+  } else {
    const double a = a_q; 
    const double b = b_q;
    return a*pow((texp), b);
@@ -91,8 +90,8 @@ int main() {
 
   rhoS = 1500 ;  // kg/m3
   eps0 = 0.52;
-  lambdaSmodel =L_KK;// L_2SOLIDI;
-  zeta_policy = ZETA_CONST; //ZETA_2SOLIDI;
+  lambdaSmodel =L_2SOLIDI;
+  zeta_policy =ZETA_2SOLIDI;
   rhoS1 = 3200 ;  // kg/m3
   eps01 = 0.52;//0.9375;
  // cps1 = 0.003661; // J/mol/K
@@ -155,7 +154,7 @@ event init(i=0) {
   }
   foreach () {
     if (y < Y_inert){
-      f[] = f0[];
+      f[] = f0[];		
       porosity[] = eps0*f[];
       } else {  f[] = f0[];
       porosity[] = eps01*f[];
@@ -173,12 +172,12 @@ event init(i=0) {
     }
   solid_ash = 0.;
   foreach (reduction(+:solid_ash)){
-    if (rho_init > rhoS){
+    if (rho_init[] > rhoS){
 	solid_ash += f[]*(1. - porosity[])*rho_init[]*dv();
     }
   }
 
-  solid_mass0 = solid_mass0 - solid_ash;
+ // solid_mass0 = solid_mass0 - solid_ash;
   fprintf(stderr, "DEBUG = %g\n", solid_mass0);
   for (int jj=0; jj<NGS; jj++) {
     scalar YG = YGList_G[jj];
@@ -266,7 +265,7 @@ fprintf (stderr, "%g\n", t);
    
     solid_mass += (f[]-porosity[])*rho_init[]*dv();
     }
-  solid_mass = solid_mass - solid_ash;
+  //solid_mass = solid_mass - solid_ash;
  fprintf (stderr, "DEBUG solid_mass = %g\n", solid_mass);
  fprintf (stderr, "DEBUG AREA_FACCIA = %g\n", AREA_FACCIA); 
  double rate = 0;
